@@ -4,7 +4,7 @@ export default function App() {
       <div className="w-full max-w-2xl bg-white shadow-lg rounded-2xl p-8">
         <h1 className="text-3xl font-bold text-blue-600">Spend Analytics Prototype</h1>
         <h1 className="text-3xl font-bold underline">
-        Hello World — Day 2 Test
+          Hello World — Day 2 Test
         </h1>
         <p className="mt-3 text-gray-600">
           You’re live on React + Vite + Tailwind. Next: upload CSVs and map headers with AI.
