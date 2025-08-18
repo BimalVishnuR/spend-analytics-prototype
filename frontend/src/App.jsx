@@ -1,22 +1,37 @@
+// frontend/src/App.jsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+
+import Home from "./pages/Home.jsx";
+import Spend from "./pages/Spend.jsx";
+import Benchmarks from "./pages/Benchmarks.jsx";
+import Suppliers from "./pages/Suppliers.jsx";
+import Indices from "./pages/Indices.jsx";
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-white shadow-lg rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-blue-600">Spend Analytics Prototype</h1>
-        <h1 className="text-3xl font-bold underline">
-          Hello World — Day 2 Test
-        </h1>
-        <p className="mt-3 text-gray-600">
-          You’re live on React + Vite + Tailwind. Next: upload CSVs and map headers with AI.
-        </p>
-        <a
-          className="inline-block mt-6 text-center rounded-xl px-4 py-2 border hover:bg-gray-50"
-          href="#"
-          onClick={(e) => e.preventDefault()}
-        >
-          Dummy Button
-        </a>
+    <Router>
+      <div className="min-h-screen bg-gray-100 p-4">
+        {/* Sidebar / Nav */}
+        <nav className="mb-6 flex space-x-4">
+          <Link className="text-blue-600 hover:underline" to="/">Home</Link>
+          <Link className="text-blue-600 hover:underline" to="/spend">Spend</Link>
+          <Link className="text-blue-600 hover:underline" to="/benchmarks">Benchmarks</Link>
+          <Link className="text-blue-600 hover:underline" to="/suppliers">Suppliers</Link>
+          <Link className="text-blue-600 hover:underline" to="/indices">Indices</Link>
+        </nav>
+
+        {/* Page content */}
+        <div>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/spend" element={<Spend />} />
+            <Route path="/benchmarks" element={<Benchmarks />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/indices" element={<Indices />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </Router>
   );
 }
