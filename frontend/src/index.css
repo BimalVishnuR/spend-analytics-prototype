@@ -74,3 +74,9 @@ button:focus-visible {
 body {
   font-family: 'Inter', sans-serif;
 }
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 
+         rounded-xl shadow-lg p-5 transition 
+         hover:shadow-xl hover:border-gray-200;
+}

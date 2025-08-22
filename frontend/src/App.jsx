@@ -1,37 +1,30 @@
-// frontend/src/App.jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-
-import Home from "./pages/Home.jsx";
-import Spend from "./pages/Spend.jsx";
-import Benchmarks from "./pages/Benchmarks.jsx";
-import Suppliers from "./pages/Suppliers.jsx";
-import Indices from "./pages/Indices.jsx";
+import Home from "./pages/Home";
 
 export default function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-100 p-4">
-        {/* Sidebar / Nav */}
-        <nav className="mb-6 flex space-x-4">
-          <Link className="text-blue-600 hover:underline" to="/">Home</Link>
-          <Link className="text-blue-600 hover:underline" to="/spend">Spend</Link>
-          <Link className="text-blue-600 hover:underline" to="/benchmarks">Benchmarks</Link>
-          <Link className="text-blue-600 hover:underline" to="/suppliers">Suppliers</Link>
-          <Link className="text-blue-600 hover:underline" to="/indices">Indices</Link>
-        </nav>
-
-        {/* Page content */}
-        <div>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/spend" element={<Spend />} />
-            <Route path="/benchmarks" element={<Benchmarks />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/indices" element={<Indices />} />
-          </Routes>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-20 bg-white/90 backdrop-blur shadow-sm">
+        <div className="mx-auto max-w-7xl px-8 py-4 flex items-center justify-between">
+          <div className="text-xl font-bold text-blue-700">
+            PDO Market Intelligence
+          </div>
+          <ul className="hidden md:flex gap-8 text-sm">
+            <li className="hover:text-blue-700 cursor-pointer">Home</li>
+            <li className="hover:text-blue-700 cursor-pointer">Commodities</li>
+            <li className="hover:text-blue-700 cursor-pointer">Insights</li>
+            <li className="hover:text-blue-700 cursor-pointer">News</li>
+          </ul>
         </div>
-      </div>
-    </Router>
+      </nav>
+
+      {/* Main page content */}
+      <Home />
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-300 text-center py-6">
+        PDO Market Intelligence © 2025 • Desktop experience
+      </footer>
+    </div>
   );
 }
