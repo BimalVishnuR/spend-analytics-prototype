@@ -1,4 +1,4 @@
-// Create this as a NEW file - don't modify your existing routes/home.js
+// routes/map.js
 
 import { Router } from "express";
 import fs from "fs";
