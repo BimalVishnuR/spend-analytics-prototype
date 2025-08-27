@@ -46,7 +46,7 @@ const corsOptions = {
 // ===== MIDDLEWARE =====
 app.use(cors(corsOptions));
 
-// Handle preflight requests for all routes - FIXED SYNTAX
+// Handle preflight requests - FIXED SYNTAX
 app.options('/:path*', cors(corsOptions));
 
 // Body parser middleware
@@ -54,19 +54,19 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ===== ROUTES =====
-// Home routes (all your existing functionality preserved)
-//app.use("/home", homeRoutes);
-//app.use("/api/home", homeRoutes); // Support both /home and /api/home
+// Home routes (uncomment when ready)
+app.use("/home", homeRoutes);
+app.use("/api/home", homeRoutes);
 
-// Map routes
-//app.use("/api/map", mapRoutes);
-//app.use("/api/commodities", commoditiesRouter);
+// Map routes (uncomment when ready)
+app.use("/api/map", mapRoutes);
+app.use("/api/commodities", commoditiesRouter);
 
 // ===== MULTER SETUP =====
 const upload = multer({ 
   dest: "uploads/",
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit - FIXED SYNTAX
   }
 });
 
@@ -113,7 +113,6 @@ app.post("/upload", upload.single("file"), (req, res) => {
       .pipe(csv())
       .on("data", (data) => results.push(data))
       .on("end", () => {
-        // Clean up uploaded file
         fs.unlinkSync(req.file.path);
         res.json({
           message: "File uploaded and parsed successfully!",
