@@ -55,12 +55,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ===== ROUTES =====
 // Home routes (all your existing functionality preserved)
-app.use("/home", homeRoutes);
-app.use("/api/home", homeRoutes); // Support both /home and /api/home
+//app.use("/home", homeRoutes);
+//app.use("/api/home", homeRoutes); // Support both /home and /api/home
 
 // Map routes
-app.use("/api/map", mapRoutes);
-app.use("/api/commodities", commoditiesRouter);
+//app.use("/api/map", mapRoutes);
+//app.use("/api/commodities", commoditiesRouter);
 
 // ===== MULTER SETUP =====
 const upload = multer({ 
