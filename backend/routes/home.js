@@ -392,7 +392,7 @@ router.get("/cost-model-2/comparison", async (req, res) => {
 // 1) Get all unique categories
 router.get("/category-mi/categories", async (req, res) => {
   try {
-    const filePath = getDataPath("Oman_cost_Indices.xlsx");
+    const filePath = getDataPath("Oman_cost_indices.xlsx");
     const rows = await readSheet(filePath);
 
     const categories = Array.from(
@@ -409,7 +409,7 @@ router.get("/category-mi/categories", async (req, res) => {
 // 2) Get time series data for a specific category
 router.get("/category-mi/indices", async (req, res) => {
   try {
-    const filePath = getDataPath("Oman_cost_Indices.xlsx");
+    const filePath = getDataPath("Oman_cost_indices.xlsx");
     const rows = await readSheet(filePath);
 
     const { category } = req.query;
