@@ -116,7 +116,7 @@ router.get('/cost-models', async (req, res) => {
 // 1) Options for filters (unique Suppliers & Pump Types)
 router.get("/cost-model-1/options", async (req, res) => {
   try {
-    const filePath = getDataPath("cost_model_1.xlsx");
+    const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
     const suppliers = Array.from(
@@ -136,7 +136,7 @@ router.get("/cost-model-1/options", async (req, res) => {
 // 2) Waterfall data for specific Supplier + Pump Type
 router.get("/cost-model-1/waterfall", async (req, res) => {
   try {
-    const filePath = getDataPath("cost_model_1.xlsx");
+    const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
     const { supplier, pumpType } = req.query;
@@ -198,7 +198,7 @@ router.get("/cost-model-1/waterfall", async (req, res) => {
 // 3) Comparison data for all suppliers of a specific pump type
 router.get("/cost-model-1/comparison", async (req, res) => {
   try {
-    const filePath = getDataPath("cost_model_1.xlsx");
+    const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
     const { pumpType } = req.query;
@@ -242,7 +242,7 @@ router.get("/cost-model-1/comparison", async (req, res) => {
 // 4) Get raw data for client-side filtering
 router.get("/cost-model-1/raw-data", async (req, res) => {
   try {
-    const filePath = getDataPath("cost_model_1.xlsx");
+    const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
     res.json({
