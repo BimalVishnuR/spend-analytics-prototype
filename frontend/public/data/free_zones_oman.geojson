@@ -1,0 +1,36 @@
+{
+  "type": "FeatureCollection",
+  "name": "free_zones_oman_demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sohar Freezone",
+        "type": "Free Zone",
+        "port": "Port of Sohar",
+        "quick_stats": "Metals, logistics hub"
+      },
+      "geometry": { "type": "Point", "coordinates": [56.67, 24.50] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Salalah Free Zone",
+        "type": "Free Zone",
+        "port": "Port of Salalah",
+        "quick_stats": "Transshipment, food processing"
+      },
+      "geometry": { "type": "Point", "coordinates": [54.09, 17.02] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Duqm SEZ",
+        "type": "SEZ",
+        "port": "Port of Duqm",
+        "quick_stats": "Heavy industry, shipyard"
+      },
+      "geometry": { "type": "Point", "coordinates": [57.70, 19.65] }
+    }
+  ]
+}

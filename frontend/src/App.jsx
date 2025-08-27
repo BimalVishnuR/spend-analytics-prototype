@@ -1,30 +1,42 @@
+// frontend/src/App.jsx
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
+import SupplyChainMap from "./pages/SupplyChainMap";
+import CostModel1 from "./pages/CostModel1";
+import CostModel2 from "./pages/CostModel2";
+import CategoryMI from "./pages/CategoryMI";
+import CapitalEquipments from "./pages/CapitalEquipments";
+
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-20 bg-white/90 backdrop-blur shadow-sm">
-        <div className="mx-auto max-w-7xl px-8 py-4 flex items-center justify-between">
-          <div className="text-xl font-bold text-blue-700">
-            PDO Market Intelligence
-          </div>
-          <ul className="hidden md:flex gap-8 text-sm">
-            <li className="hover:text-blue-700 cursor-pointer">Home</li>
-            <li className="hover:text-blue-700 cursor-pointer">Commodities</li>
-            <li className="hover:text-blue-700 cursor-pointer">Insights</li>
-            <li className="hover:text-blue-700 cursor-pointer">News</li>
-          </ul>
+    <Router>
+      {/* Sidebar + main layout - Full viewport height */}
+      <div className="flex h-screen bg-gray-50 text-gray-900">
+        {/* Sidebar (fixed width) */}
+        <Navbar />
+
+        {/* Main content area - Use full height minus footer */}
+        <div className="flex-1 flex flex-col ml-24 h-screen">
+          <main className="flex-1 overflow-auto">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/supply-chain-map" element={<SupplyChainMap />} />
+              <Route path="/cost-model-1" element={<CostModel1 />} />
+              <Route path="/cost-model-2" element={<CostModel2 />} />
+              <Route path="/category-mi" element={<CategoryMI />} />
+              <Route path="/capital-equipments" element={<CapitalEquipments />} />
+            </Routes>
+          </main>
+
+          {/* Footer - 5vh */}
+          <footer className="h-[5vh] bg-white border-t flex items-center justify-center text-sm text-gray-500 flex-shrink-0">
+            © 2025 PDO Intelligence
+          </footer>
         </div>
-      </nav>
-
-      {/* Main page content */}
-      <Home />
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 text-center py-6">
-        PDO Market Intelligence © 2025 • Desktop experience
-      </footer>
-    </div>
+      </div>
+    </Router>
   );
 }
+

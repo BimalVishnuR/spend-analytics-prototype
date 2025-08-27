@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "name": "pipelines_demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Khazzan → Sohar (Gas)", "status": "operational" },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [57.14, 21.28],
+          [56.90, 22.20],
+          [56.67, 24.50]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Mukhaizna → Duqm (Crude)", "status": "operational" },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [56.69, 19.37],
+          [57.00, 19.50],
+          [57.70, 19.65]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [58.4059, 23.5859] },
+      "properties": {
+        "supplier_name": "PetroTech LLC",
+        "category": "Oilfield Services",
+        "city": "Muscat",
+        "governorate": "Muscat"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [57.5306, 22.9336] },
+      "properties": {
+        "supplier_name": "Oman Engineering SAOC",
+        "category": "Engineering",
+        "city": "Nizwa",
+        "governorate": "Ad Dakhiliyah"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [58.1891, 23.6703] },
+      "properties": {
+        "supplier_name": "Global Shipping Oman",
+        "category": "Logistics",
+        "city": "Seeb",
+        "governorate": "Muscat"
+      }
+    }
+  ]
+}

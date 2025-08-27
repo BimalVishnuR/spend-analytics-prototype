@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "name": "governorates_demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Muscat Governorate" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [58.20, 23.40], [59.00, 23.40],
+          [59.00, 23.90], [58.20, 23.90],
+          [58.20, 23.40]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Dhofar Governorate" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [53.50, 16.60], [56.00, 16.60],
+          [56.00, 19.00], [53.50, 19.00],
+          [53.50, 16.60]
+        ]]
+      }
+    }
+  ]
+}

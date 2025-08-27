@@ -1,0 +1,36 @@
+{
+  "type": "FeatureCollection",
+  "name": "ports_oman",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Port of Sohar",
+        "cppi_rank": 64,
+        "type": "Port",
+        "source": "World Bank CPPI (placeholder)"
+      },
+      "geometry": { "type": "Point", "coordinates": [56.6247, 24.5000] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Port of Duqm",
+        "cppi_rank": 280,
+        "type": "Port",
+        "source": "World Bank CPPI (placeholder)"
+      },
+      "geometry": { "type": "Point", "coordinates": [57.7030, 19.6590] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Port of Salalah",
+        "cppi_rank": 44,
+        "type": "Port",
+        "source": "World Bank CPPI (placeholder)"
+      },
+      "geometry": { "type": "Point", "coordinates": [54.0913, 16.9515] }
+    }
+  ]
+}

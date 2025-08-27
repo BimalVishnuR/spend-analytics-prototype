@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "name": "og_fields_demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Yibal Field", "kind": "Oil Field", "operator": "PDO" },
+      "geometry": { "type": "Point", "coordinates": [56.25, 21.55] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Mukhaizna Field", "kind": "Oil Field", "operator": "Oxy Oman" },
+      "geometry": { "type": "Point", "coordinates": [56.69, 19.37] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Khazzan Field", "kind": "Gas Field", "operator": "bp Oman" },
+      "geometry": { "type": "Point", "coordinates": [57.14, 21.28] }
+    }
+  ]
+}

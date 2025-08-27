@@ -1,0 +1,8 @@
+{
+  "name": "Strait of Hormuz",
+  "status": "Caution",
+  "last_advisory_source": "UKMTO (placeholder)",
+  "last_advisory_date": "2025-08-15",
+  "notes": "Routine reporting; monitor transits and AIS dark activity.",
+  "coordinates": [56.0, 26.5]
+}
