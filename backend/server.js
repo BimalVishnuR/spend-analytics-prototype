@@ -276,6 +276,27 @@ app.use('*', (req, res) => {
   });
 });
 
+// Debug route - add this temporarily
+app.get("/debug/files", (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const dataDir = path.join(__dirname, 'data');
+  
+  try {
+    const files = fs.readdirSync(dataDir);
+    res.json({
+      dataDirectory: dataDir,
+      files: files,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      dataDirectory: dataDir
+    });
+  }
+});
+
 // ===== START SERVER =====
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

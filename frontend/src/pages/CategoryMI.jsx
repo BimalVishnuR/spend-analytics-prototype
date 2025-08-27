@@ -32,26 +32,34 @@ export default function CategoryMI() {
   const [news, setNews] = useState([]);
   const [error, setError] = useState("");
 
-  // Load categories
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/home/category-mi/categories`);
-        if (!res.ok) throw new Error(`/home/category-mi/categories -> ${res.status}`);
-        const json = await res.json();
-        setCategories(json.categories || []);
-
-        // Preselect first category
-        if (json.categories?.length && !selectedCategory) {
-          setSelectedCategory(json.categories[0]);
-        }
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load categories from backend.");
+// Load categories
+useEffect(() => {
+  (async () => {
+    try {
+      console.log("Fetching categories from:", `${API_BASE}/home/category-mi/categories`);
+      const res = await fetch(`${API_BASE}/home/category-mi/categories`);
+      console.log("Response status:", res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error response:", errorText);
+        throw new Error(`/home/category-mi/categories -> ${res.status}: ${errorText}`);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      
+      const json = await res.json();
+      console.log("Categories response:", json);
+      setCategories(json.categories || []);
+
+      if (json.categories?.length && !selectedCategory) {
+        setSelectedCategory(json.categories[0]);
+      }
+    } catch (e) {
+      console.error("Full error:", e);
+      setError(`Failed to load categories: ${e.message}`);
+    }
+  })();
+}, []);
+
 
   // Load indices data when category changes
   useEffect(() => {

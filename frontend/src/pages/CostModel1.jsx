@@ -33,41 +33,34 @@ export default function CostModel1() {
   const [comparisonData, setComparisonData] = useState([]);
   const [error, setError] = useState("");
 
-  // Load dropdown options and raw data
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/home/cost-model-1/options`);
-        if (!res.ok) throw new Error(`/home/cost-model-1/options -> ${res.status}`);
-        const json = await res.json();
-        
-        setAllSuppliers(json.suppliers || []);
-        setAllPumpTypes(json.pumpTypes || []);
-        
-        // Try to load raw data for filtering
-        try {
-          const dataRes = await fetch(`${API_BASE}/home/cost-model-1/raw-data`);
-          if (dataRes.ok) {
-            const rawData = await dataRes.json();
-            setAllData(rawData.data || []);
-          }
-        } catch (dataError) {
-          // If raw-data endpoint doesn't exist, use suppliers list directly
-          console.log("Using suppliers list directly for filtering");
-          setFilteredSuppliers(json.suppliers || []);
-        }
-
-        // Preselect first pump type
-        if (json.pumpTypes?.length && !selectedPumpType) {
-          setSelectedPumpType(json.pumpTypes[0]);
-        }
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load filter options from backend.");
+// Load dropdown options and raw data
+useEffect(() => {
+  (async () => {
+    try {
+      console.log("Fetching options from:", `${API_BASE}/home/cost-model-1/options`);
+      const res = await fetch(`${API_BASE}/home/cost-model-1/options`);
+      console.log("Response status:", res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error response:", errorText);
+        throw new Error(`/home/cost-model-1/options -> ${res.status}: ${errorText}`);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      
+      const json = await res.json();
+      console.log("Options response:", json);
+      
+      setAllSuppliers(json.suppliers || []);
+      setAllPumpTypes(json.pumpTypes || []);
+      
+      // ... rest of your logic
+    } catch (e) {
+      console.error("Full error:", e);
+      setError(`Failed to load filter options: ${e.message}`);
+    }
+  })();
+}, []);
+
 
   // Filter supplier options when pump type changes
 useEffect(() => {
