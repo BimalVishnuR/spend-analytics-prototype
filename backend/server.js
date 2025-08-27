@@ -24,7 +24,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000',
     'https://spend-analytics-prototype.vercel.app',
-    /^https:\/\/spend-analytics-prototype-.+\.vercel\.app$/  // Fixed regex
+    /^https:\/\/spend-analytics-prototype-.+\.vercel\.app$/
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -46,8 +46,8 @@ const corsOptions = {
 // ===== MIDDLEWARE =====
 app.use(cors(corsOptions));
 
-// Handle preflight requests - FIXED: Removed backslash
-app.options('/:path*', cors(corsOptions));
+// Handle preflight requests - Express 4.x syntax
+app.options('*', cors(corsOptions));
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
@@ -63,7 +63,7 @@ app.use("/api/commodities", commoditiesRouter);
 const upload = multer({ 
   dest: "uploads/",
   limits: {
-    fileSize: 10 * 1024 * 1024 // FIXED: Removed backslashes
+    fileSize: 10 * 1024 * 1024
   }
 });
 
@@ -73,6 +73,7 @@ app.get("/", (req, res) => {
     status: "Backend is running!",
     timestamp: new Date().toISOString(),
     cors: "Enabled for Vercel",
+    express_version: "4.x",
     homeEndpoints: [
       "/home/macro",
       "/home/commodities", 
@@ -262,8 +263,8 @@ app.use((error, req, res, next) => {
   });
 });
 
-// ===== 404 HANDLER - FIXED: Removed backslash
-app.use('/:path*', (req, res) => {
+// ===== 404 HANDLER - Express 4.x syntax =====
+app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,
@@ -281,5 +282,5 @@ app.listen(PORT, () => {
   console.log(`📡 CORS enabled for: https://spend-analytics-prototype.vercel.app`);
   console.log(`🏠 Home endpoints available at /home/*`);
   console.log(`🗺️  Map endpoints available at /api/map/*`);
-  console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'} (Express 4.x)`);
 });
