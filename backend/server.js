@@ -23,7 +23,8 @@ const corsOptions = {
   origin: [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://spend-analytics-prototype.vercel.app'
+    'https://spend-analytics-prototype.vercel.app',
+    /^https:\/\/spend-analytics-prototype-.+\.vercel\.app$/  // Regex for preview deployments
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -39,7 +40,7 @@ const corsOptions = {
     'Date',
     'X-Api-Version'
   ],
-  optionsSuccessStatus: 200 // For legacy browser support
+  optionsSuccessStatus: 200
 };
 
 // ===== MIDDLEWARE =====
@@ -47,6 +48,7 @@ app.use(cors(corsOptions));
 
 // Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
+
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
