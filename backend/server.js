@@ -1,7 +1,4 @@
 // backend/server.js
-// STEP 1: UPDATE backend/server.js (PRESERVE ALL HOME ROUTES)
-// Replace your current server.js with this version:
-
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -21,61 +18,71 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ===== MIDDLEWARE =====
-// ===== MIDDLEWARE =====
+// ===== CORS CONFIGURATION =====
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://spend-analytics-prototype.vercel.app'
-    ];
-    
-    // Check if the origin is in our allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Also allow any vercel.app subdomain (in case your URL changes)
-    if (origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://spend-analytics-prototype.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'Access-Control-Allow-Headers',
+    'X-Requested-With',
+    'Accept',
+    'Accept-Version',
+    'Content-Length',
+    'Content-MD5',
+    'Date',
+    'X-Api-Version'
+  ],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
+// ===== MIDDLEWARE =====
 app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 
-app.use(express.json());
+// Body parser middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ===== ROUTES =====
-// Home routes (UNCHANGED - all your existing functionality preserved)
+// Home routes (all your existing functionality preserved)
 app.use("/home", homeRoutes);
 app.use("/api/home", homeRoutes); // Support both /home and /api/home
 
-// Map routes (NEW - only for map functionality)
+// Map routes
 app.use("/api/map", mapRoutes);
 app.use("/api/commodities", commoditiesRouter);
-// ===== MULTER SETUP (PRESERVE YOUR FILE UPLOAD) =====
-const upload = multer({ dest: "uploads/" });
+
+// ===== MULTER SETUP =====
+const upload = multer({ 
+  dest: "uploads/",
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {
   res.json({
     status: "Backend is running!",
     timestamp: new Date().toISOString(),
+    cors: "Enabled for Vercel",
     homeEndpoints: [
       "/home/macro",
       "/home/commodities", 
       "/home/cost-models",
+      "/home/cost-model-1/options",
+      "/home/cost-model-2/options",
+      "/home/capital-equipments/options",
+      "/home/category-mi/categories",
       "/home/ai-insights",
       "/home/trade",
       "/home/news"
@@ -91,27 +98,38 @@ app.get("/", (req, res) => {
   });
 });
 
-// ===== ALL YOUR EXISTING ENDPOINTS (PRESERVED EXACTLY) =====
+// ===== ALL YOUR EXISTING ENDPOINTS =====
 
-// Upload endpoint (UNCHANGED)
+// Upload endpoint
 app.post("/upload", upload.single("file"), (req, res) => {
-  const results = [];
-  fs.createReadStream(req.file.path)
-    .pipe(csv())
-    .on("data", (data) => results.push(data))
-    .on("end", () => {
-      res.json({
-        message: "File uploaded and parsed successfully!",
-        preview: results.slice(0, 10),
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (data) => results.push(data))
+      .on("end", () => {
+        // Clean up uploaded file
+        fs.unlinkSync(req.file.path);
+        res.json({
+          message: "File uploaded and parsed successfully!",
+          preview: results.slice(0, 10),
+        });
+      })
+      .on("error", (err) => {
+        console.error("CSV Parse Error:", err);
+        res.status(500).json({ error: "Parse failed", message: err.message });
       });
-    })
-    .on("error", (err) => {
-      console.error(err);
-      res.status(500).json({ message: "Parse failed." });
-    });
+  } catch (error) {
+    console.error("Upload Error:", error);
+    res.status(500).json({ error: "Upload failed", message: error.message });
+  }
 });
 
-// Market: Brent vs LNG (UNCHANGED)
+// Market: Brent vs LNG
 app.get("/market/brent-lng", async (req, res) => {
   try {
     const rows = await loadCSV("brent_lng_30d.csv");
@@ -122,23 +140,23 @@ app.get("/market/brent-lng", async (req, res) => {
     }));
     res.json(clean);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to load brent_lng_30d.csv" });
+    console.error("Brent LNG Error:", e);
+    res.status(500).json({ error: "Failed to load brent_lng_30d.csv", message: e.message });
   }
 });
 
-// Oman indices (UNCHANGED)
+// Oman indices
 app.get("/indices/oman", async (req, res) => {
   try {
     const rows = await loadCSV("oman_indices.csv");
     res.json(rows);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to load oman_indices.csv" });
+    console.error("Oman Indices Error:", e);
+    res.status(500).json({ error: "Failed to load oman_indices.csv", message: e.message });
   }
 });
 
-// Benchmarks (UNCHANGED)
+// Benchmarks
 app.get("/benchmarks", async (req, res) => {
   try {
     const rows = await loadCSV("benchmarks.csv");
@@ -150,12 +168,12 @@ app.get("/benchmarks", async (req, res) => {
     }));
     res.json(clean);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to load benchmarks.csv" });
+    console.error("Benchmarks Error:", e);
+    res.status(500).json({ error: "Failed to load benchmarks.csv", message: e.message });
   }
 });
 
-// Suppliers (UNCHANGED)
+// Suppliers
 app.get("/suppliers", async (req, res) => {
   try {
     const rows = await loadCSV("suppliers_oman.csv");
@@ -167,23 +185,23 @@ app.get("/suppliers", async (req, res) => {
     }));
     res.json(clean);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to load suppliers_oman.csv" });
+    console.error("Suppliers Error:", e);
+    res.status(500).json({ error: "Failed to load suppliers_oman.csv", message: e.message });
   }
 });
 
-// Reports (UNCHANGED)
+// Reports
 app.get("/reports", async (req, res) => {
   try {
     const rows = await loadCSV("reports.csv");
     res.json(rows);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to load reports.csv" });
+    console.error("Reports Error:", e);
+    res.status(500).json({ error: "Failed to load reports.csv", message: e.message });
   }
 });
 
-// Spend demo (UNCHANGED)
+// Spend demo
 app.get("/spend/demo", async (req, res) => {
   try {
     const rows = await loadCSV("spend_demo.csv");
@@ -206,8 +224,8 @@ app.get("/spend/demo", async (req, res) => {
       grandTotal: grand,
     });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to process spend_demo.csv" });
+    console.error("Spend Demo Error:", e);
+    res.status(500).json({ error: "Failed to process spend_demo.csv", message: e.message });
   }
 });
 
@@ -229,8 +247,42 @@ app.get("/map/oman-supply-chain", (req, res) => {
   });
 });
 
+// ===== ERROR HANDLING MIDDLEWARE =====
+app.use((error, req, res, next) => {
+  console.error('Server Error:', {
+    message: error.message,
+    stack: error.stack,
+    url: req.originalUrl,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+  
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: error.message,
+    endpoint: req.originalUrl,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ===== 404 HANDLER =====
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.originalUrl} not found`,
+    availableEndpoints: {
+      health: '/',
+      home: '/home/*',
+      api: '/api/*'
+    }
+  });
+});
+
+// ===== START SERVER =====
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log("Home endpoints preserved at /home/*");
-  console.log("New map endpoints available at /api/map/*");
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📡 CORS enabled for: https://spend-analytics-prototype.vercel.app`);
+  console.log(`🏠 Home endpoints available at /home/*`);
+  console.log(`🗺️  Map endpoints available at /api/map/*`);
+  console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
