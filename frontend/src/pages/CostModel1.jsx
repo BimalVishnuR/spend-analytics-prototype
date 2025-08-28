@@ -21,113 +21,164 @@ export default function CostModel1() {
   // Store all options
   const [allSuppliers, setAllSuppliers] = useState([]);
   const [allPumpTypes, setAllPumpTypes] = useState([]);
+  const [allCategories, setAllCategories] = useState([]); // NEW: Categories
   const [allData, setAllData] = useState([]);
   
-  // Filtered supplier options based on pump type
+  // Filtered options based on selections
+  const [filteredPumpTypes, setFilteredPumpTypes] = useState([]); // NEW: Filtered pump types
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
   
   // Selected values
+  const [selectedCategory, setSelectedCategory] = useState(""); // NEW: Selected category
   const [selectedPumpType, setSelectedPumpType] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [waterfallSequence, setWaterfallSequence] = useState([]);
   const [comparisonData, setComparisonData] = useState([]);
   const [error, setError] = useState("");
 
-// Load dropdown options and raw data
-useEffect(() => {
-  (async () => {
-    try {
-      console.log("Fetching options from:", `${API_BASE}/home/cost-model-1/options`);
-      const res = await fetch(`${API_BASE}/home/cost-model-1/options`);
-      console.log("Response status:", res.status);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Error response:", errorText);
-        throw new Error(`/home/cost-model-1/options -> ${res.status}: ${errorText}`);
-      }
-      
-      const json = await res.json();
-      console.log("Options response:", json);
-      
-      setAllSuppliers(json.suppliers || []);
-      setAllPumpTypes(json.pumpTypes || []);
-      
-      // ... rest of your logic
-    } catch (e) {
-      console.error("Full error:", e);
-      setError(`Failed to load filter options: ${e.message}`);
-    }
-  })();
-}, []);
-
-
-  // Filter supplier options when pump type changes
-useEffect(() => {
-  if (!selectedPumpType) {
-    setFilteredSuppliers([]);
-    setSelectedSupplier("");
-    return;
-  }
-
-  console.log("Filtering suppliers for pump type:", selectedPumpType); // DEBUG
-  console.log("All data available:", allData.length); // DEBUG
-
-  if (allData.length > 0) {
-    // Use raw data for filtering if available
-    console.log("Sample data row:", allData[0]); // DEBUG - to see data structure
-    
-    const suppliersForPumpType = allData
-      .filter(item => {
-        const itemPumpType = String(item["Pump Type"] ?? "").trim();
-        const itemSupplier = String(item["Supplier"] ?? "").trim();
-        const matches = itemPumpType === String(selectedPumpType).trim() && itemSupplier !== "";
+  // Load dropdown options and raw data
+  useEffect(() => {
+    (async () => {
+      try {
+        console.log("Fetching options from:", `${API_BASE}/home/cost-model-1/options`);
+        const res = await fetch(`${API_BASE}/home/cost-model-1/options`);
+        console.log("Response status:", res.status);
         
-        // Debug each row
-        if (matches) {
-          console.log("Found matching row:", { pumpType: itemPumpType, supplier: itemSupplier });
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Error response:", errorText);
+          throw new Error(`/home/cost-model-1/options -> ${res.status}: ${errorText}`);
         }
         
-        return matches;
-      })
-      .map(item => String(item["Supplier"] ?? "").trim());
-    
-    const uniqueSuppliers = Array.from(new Set(suppliersForPumpType)).filter(Boolean);
-    
-    console.log("Filtered suppliers from raw data:", uniqueSuppliers); // DEBUG
-    
-    if (uniqueSuppliers.length > 0) {
-      setFilteredSuppliers(uniqueSuppliers);
-      setSelectedSupplier(uniqueSuppliers[0] || "");
-    } else {
-      // If no suppliers found for this pump type, show empty list
-      console.log("No suppliers found for pump type:", selectedPumpType);
+        const json = await res.json();
+        console.log("Options response:", json);
+        
+        setAllSuppliers(json.suppliers || []);
+        setAllPumpTypes(json.pumpTypes || []);
+        setAllCategories(json.categories || []); // NEW: Set categories
+        
+        // Try to load raw data for filtering
+        try {
+          const dataRes = await fetch(`${API_BASE}/home/cost-model-1/raw-data`);
+          if (dataRes.ok) {
+            const rawData = await dataRes.json();
+            setAllData(rawData.data || []);
+          }
+        } catch (dataError) {
+          console.log("Using suppliers list directly for filtering");
+          setFilteredSuppliers(json.suppliers || []);
+          setFilteredPumpTypes(json.pumpTypes || []); // NEW: Set filtered pump types
+        }
+
+        // Preselect first category
+        if (json.categories?.length && !selectedCategory) {
+          setSelectedCategory(json.categories[0]);
+        }
+        
+      } catch (e) {
+        console.error("Full error:", e);
+        setError(`Failed to load filter options: ${e.message}`);
+      }
+    })();
+  }, []);
+
+  // NEW: Filter pump types when category changes
+  useEffect(() => {
+    if (!selectedCategory) {
+      setFilteredPumpTypes([]);
+      setSelectedPumpType("");
       setFilteredSuppliers([]);
       setSelectedSupplier("");
+      return;
     }
-  } else {
-    // Fallback: if no raw data, don't filter (show all suppliers)
-    console.log("No raw data available, showing all suppliers"); // DEBUG
-    setFilteredSuppliers(allSuppliers);
-    setSelectedSupplier(allSuppliers[0] || "");
-  }
-}, [selectedPumpType, allData, allSuppliers]);
 
+    console.log("Filtering pump types for category:", selectedCategory);
 
-  // Load waterfall data when both filters change
+    if (allData.length > 0) {
+      const pumpTypesForCategory = allData
+        .filter(item => {
+          const itemCategory = String(item["Category"] ?? "").trim();
+          const itemPumpType = String(item["Pump Type"] ?? "").trim();
+          return itemCategory === String(selectedCategory).trim() && itemPumpType !== "";
+        })
+        .map(item => String(item["Pump Type"] ?? "").trim());
+      
+      const uniquePumpTypes = Array.from(new Set(pumpTypesForCategory)).filter(Boolean);
+      console.log("Filtered pump types from raw data:", uniquePumpTypes);
+      
+      if (uniquePumpTypes.length > 0) {
+        setFilteredPumpTypes(uniquePumpTypes);
+        setSelectedPumpType(uniquePumpTypes[0] || "");
+      } else {
+        console.log("No pump types found for category:", selectedCategory);
+        setFilteredPumpTypes([]);
+        setSelectedPumpType("");
+      }
+    } else {
+      // Fallback: if no raw data, don't filter (show all pump types)
+      console.log("No raw data available, showing all pump types");
+      setFilteredPumpTypes(allPumpTypes);
+      setSelectedPumpType(allPumpTypes[0] || "");
+    }
+  }, [selectedCategory, allData, allPumpTypes]);
+
+  // UPDATED: Filter supplier options when category AND pump type change
   useEffect(() => {
-    if (!selectedSupplier || !selectedPumpType) return;
+    if (!selectedCategory || !selectedPumpType) {
+      setFilteredSuppliers([]);
+      setSelectedSupplier("");
+      return;
+    }
+
+    console.log("Filtering suppliers for category:", selectedCategory, "pump type:", selectedPumpType);
+
+    if (allData.length > 0) {
+      const suppliersForFilters = allData
+        .filter(item => {
+          const itemCategory = String(item["Category"] ?? "").trim();
+          const itemPumpType = String(item["Pump Type"] ?? "").trim();
+          const itemSupplier = String(item["Supplier"] ?? "").trim();
+          
+          return itemCategory === String(selectedCategory).trim() &&
+                 itemPumpType === String(selectedPumpType).trim() && 
+                 itemSupplier !== "";
+        })
+        .map(item => String(item["Supplier"] ?? "").trim());
+      
+      const uniqueSuppliers = Array.from(new Set(suppliersForFilters)).filter(Boolean);
+      console.log("Filtered suppliers from raw data:", uniqueSuppliers);
+      
+      if (uniqueSuppliers.length > 0) {
+        setFilteredSuppliers(uniqueSuppliers);
+        setSelectedSupplier(uniqueSuppliers[0] || "");
+      } else {
+        console.log("No suppliers found for filters");
+        setFilteredSuppliers([]);
+        setSelectedSupplier("");
+      }
+    } else {
+      // Fallback: if no raw data, don't filter (show all suppliers)
+      console.log("No raw data available, showing all suppliers");
+      setFilteredSuppliers(allSuppliers);
+      setSelectedSupplier(allSuppliers[0] || "");
+    }
+  }, [selectedCategory, selectedPumpType, allData, allSuppliers]);
+
+  // UPDATED: Load waterfall data when all three filters change
+  useEffect(() => {
+    if (!selectedCategory || !selectedSupplier || !selectedPumpType) return;
     (async () => {
       try {
         setError("");
         const qs = new URLSearchParams({
+          category: selectedCategory, // NEW: Include category
           supplier: selectedSupplier,
           pumpType: selectedPumpType,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-1/waterfall?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-1/waterfall -> ${res.status}`);
         const json = await res.json();
-        console.log("Waterfall data received:", json.waterfallSequence); // DEBUG
+        console.log("Waterfall data received:", json.waterfallSequence);
         setWaterfallSequence(json.waterfallSequence || []);
       } catch (e) {
         console.error(e);
@@ -135,29 +186,30 @@ useEffect(() => {
         setError("Failed to load waterfall data for the selected filters.");
       }
     })();
-  }, [selectedSupplier, selectedPumpType]);
+  }, [selectedCategory, selectedSupplier, selectedPumpType]);
 
-  // Load comparison data when pump type changes
+  // UPDATED: Load comparison data when category and pump type change
   useEffect(() => {
-    if (!selectedPumpType) return;
+    if (!selectedCategory || !selectedPumpType) return;
     (async () => {
       try {
         const qs = new URLSearchParams({
+          category: selectedCategory, // NEW: Include category
           pumpType: selectedPumpType,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-1/comparison?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-1/comparison -> ${res.status}`);
         const json = await res.json();
-        console.log("Comparison data received:", json.comparisonData); // DEBUG
+        console.log("Comparison data received:", json.comparisonData);
         setComparisonData(json.comparisonData || []);
       } catch (e) {
         console.error(e);
         setComparisonData([]);
       }
     })();
-  }, [selectedPumpType]);
+  }, [selectedCategory, selectedPumpType]);
 
-  // True waterfall chart data
+  // True waterfall chart data (unchanged)
   const waterfallData = useMemo(() => {
     if (!waterfallSequence?.length) return [];
     
@@ -197,7 +249,7 @@ useEffect(() => {
     return data;
   }, [waterfallSequence]);
 
-  // Custom tooltip for waterfall
+  // Custom tooltip for waterfall (unchanged)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -230,29 +282,47 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Filters */}
+        {/* UPDATED: Filters - Now includes Category */}
         <div className="flex flex-wrap gap-3 mb-4">
-          {/* Pump Type comes first */}
+          {/* NEW: Category comes first */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="border p-2 rounded"
+          >
+            <option value="" disabled>
+              Select category…
+            </option>
+            {allCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          {/* Pump Type comes second, filtered by category */}
           <select
             value={selectedPumpType}
             onChange={(e) => setSelectedPumpType(e.target.value)}
             className="border p-2 rounded"
+            disabled={!selectedCategory}
           >
             <option value="" disabled>
               Select pump type…
             </option>
-            {allPumpTypes.map((p) => (
+            {filteredPumpTypes.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
             ))}
           </select>
 
-          {/* Supplier comes second, filtered by pump type */}
+          {/* Supplier comes third, filtered by category and pump type */}
           <select
             value={selectedSupplier}
             onChange={(e) => setSelectedSupplier(e.target.value)}
             className="border p-2 rounded"
+            disabled={!selectedPumpType}
           >
             <option value="" disabled>
               Select supplier…
@@ -265,23 +335,23 @@ useEffect(() => {
           </select>
         </div>
         
-        {/* Debug info */}
+        {/* UPDATED: Debug info */}
         <div className="text-xs text-gray-500 mb-2">
-          Pump Type: {selectedPumpType} | Suppliers available: {filteredSuppliers.length} | Selected: {selectedSupplier}
+          Category: {selectedCategory} | Pump Type: {selectedPumpType} | Suppliers available: {filteredSuppliers.length} | Selected: {selectedSupplier}
         </div>
       </div>
 
       {/* Charts Container - Full Height */}
-      {!selectedSupplier || !selectedPumpType ? (
+      {!selectedCategory || !selectedSupplier || !selectedPumpType ? (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          Pick a Pump Type and Supplier to see the charts.
+          Pick a Category, Pump Type, and Supplier to see the charts.
         </div>
       ) : (
         <div className="flex-1 flex gap-6">
           {/* Left: Waterfall Chart - 70% */}
           <div className="w-[70%] bg-gray-50 p-4 rounded-lg flex flex-col">
             <h3 className="text-lg font-medium mb-3 flex-shrink-0">
-              Cost Breakdown Waterfall: {selectedPumpType} ({selectedSupplier})
+              Cost Breakdown Waterfall: {selectedCategory} - {selectedPumpType} ({selectedSupplier})
             </h3>
             <div className="flex-1">
               <ResponsiveContainer width="100%" height="100%">
@@ -347,7 +417,9 @@ useEffect(() => {
             <h3 className="text-lg font-medium mb-3 flex-shrink-0">
               Final Cost by Supplier
             </h3>
-            <p className="text-sm text-gray-600 mb-3 flex-shrink-0">{selectedPumpType}</p>
+            <p className="text-sm text-gray-600 mb-3 flex-shrink-0">
+              {selectedCategory} - {selectedPumpType}
+            </p>
             
             <div className="flex-1">
               {comparisonData && comparisonData.length > 0 ? (

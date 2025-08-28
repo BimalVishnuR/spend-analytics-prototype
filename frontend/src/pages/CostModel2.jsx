@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   LabelList,
   Cell,
@@ -17,7 +16,9 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:5001";
 
-export default function CostModel2() {
+// Updated to accept props for shared category state
+export default function CostModel2({ selectedCategory, onCategoryChange }) {
+  const [categories, setCategories] = useState([]);
   const [jobTitles, setJobTitles] = useState([]);
   const [origins, setOrigins] = useState([]);
   const [selectedJobTitle, setSelectedJobTitle] = useState("");
@@ -26,11 +27,15 @@ export default function CostModel2() {
   const [comparisonData, setComparisonData] = useState([]);
   const [error, setError] = useState("");
 
-  // Load dropdown options
+
+
+  // Load dropdown options filtered by category
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/home/cost-model-2/options`);
+        // Add category parameter to filter job titles and origins
+        const qs = selectedCategory ? `?category=${encodeURIComponent(selectedCategory)}` : '';
+        const res = await fetch(`${API_BASE}/home/cost-model-2/options${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-2/options -> ${res.status}`);
         const json = await res.json();
         setJobTitles(json.jobTitles || []);
@@ -48,23 +53,23 @@ export default function CostModel2() {
         setError("Failed to load filter options from backend.");
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCategory, selectedJobTitle, selectedOrigin]);
 
-  // Load waterfall data when both filters change
+  // Load waterfall data when filters change
   useEffect(() => {
-    if (!selectedJobTitle || !selectedOrigin) return;
+    if (!selectedCategory || !selectedJobTitle || !selectedOrigin) return;
     (async () => {
       try {
         setError("");
         const qs = new URLSearchParams({
+          category: selectedCategory, // Include category
           jobTitle: selectedJobTitle,
           origin: selectedOrigin,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-2/waterfall?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-2/waterfall -> ${res.status}`);
         const json = await res.json();
-        console.log("Waterfall data received:", json.waterfallSequence); // DEBUG
+        console.log("Waterfall data received:", json.waterfallSequence);
         setWaterfallSequence(json.waterfallSequence || []);
       } catch (e) {
         console.error(e);
@@ -72,27 +77,28 @@ export default function CostModel2() {
         setError("Failed to load waterfall data for the selected filters.");
       }
     })();
-  }, [selectedJobTitle, selectedOrigin]);
+  }, [selectedCategory, selectedJobTitle, selectedOrigin]);
 
-  // Load comparison data when job title changes
+  // Load comparison data when category and job title change
   useEffect(() => {
-    if (!selectedJobTitle) return;
+    if (!selectedCategory || !selectedJobTitle) return;
     (async () => {
       try {
         const qs = new URLSearchParams({
+          category: selectedCategory, // Include category
           jobTitle: selectedJobTitle,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-2/comparison?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-2/comparison -> ${res.status}`);
         const json = await res.json();
-        console.log("Comparison data received:", json.comparisonData); // DEBUG
+        console.log("Comparison data received:", json.comparisonData);
         setComparisonData(json.comparisonData || []);
       } catch (e) {
         console.error(e);
         setComparisonData([]);
       }
     })();
-  }, [selectedJobTitle]);
+  }, [selectedCategory, selectedJobTitle]);
 
   // True waterfall chart data
   const waterfallData = useMemo(() => {
@@ -155,18 +161,34 @@ export default function CostModel2() {
   };
 
   return (
-    <div className="h-[89vh] flex flex-col p-6 bg-white">
-      {/* Header */}
+    <div className="h-full flex flex-col px-6 pb-6">
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
+          {error}
+        </div>
+      )}
+
+      {/* Category Filter */}
       <div className="flex-shrink-0 mb-4">
-        <h2 className="text-xl font-semibold mb-4">Cost Model 2 — Labor SCM Waterfall Analysis</h2>
+        <h3 className="text-md font-medium mb-3">Select Category</h3>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => onCategoryChange(category)} // Use prop function
+              className={`px-3 py-2 rounded text-sm transition-colors ${
+                selectedCategory === category
+                  ? "bg-blue-500 text-white font-medium"
+                  : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
 
-        {error && (
-          <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
-            {error}
-          </div>
-        )}
-
-        {/* Filters */}
+        {/* Other Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
           <select
             value={selectedJobTitle}
@@ -201,16 +223,16 @@ export default function CostModel2() {
       </div>
 
       {/* Charts Container - Full Height */}
-      {!selectedJobTitle || !selectedOrigin ? (
+      {!selectedCategory || !selectedJobTitle || !selectedOrigin ? (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          Pick a Job Title and Origin to see the charts.
+          Pick a Category, Job Title and Origin to see the charts.
         </div>
       ) : (
         <div className="flex-1 flex gap-6">
           {/* Left: Waterfall Chart - 70% */}
           <div className="w-[70%] bg-gray-50 p-4 rounded-lg flex flex-col">
             <h3 className="text-lg font-medium mb-3 flex-shrink-0">
-              Cost Breakdown Waterfall: {selectedJobTitle} ({selectedOrigin})
+              Cost Breakdown Waterfall: {selectedCategory} - {selectedJobTitle} ({selectedOrigin})
             </h3>
             <div className="flex-1">
               <ResponsiveContainer width="100%" height="100%">
@@ -276,12 +298,9 @@ export default function CostModel2() {
             <h3 className="text-lg font-medium mb-3 flex-shrink-0">
               Final Rate by Origin
             </h3>
-            <p className="text-sm text-gray-600 mb-3 flex-shrink-0">{selectedJobTitle}</p>
-            
-            {/* Debug info */}
-            <div className="text-xs text-gray-500 mb-2 flex-shrink-0">
-              Data points: {comparisonData?.length || 0}
-            </div>
+            <p className="text-sm text-gray-600 mb-3 flex-shrink-0">
+              {selectedCategory} - {selectedJobTitle}
+            </p>
             
             <div className="flex-1">
               {comparisonData && comparisonData.length > 0 ? (
@@ -323,19 +342,6 @@ export default function CostModel2() {
                 <div className="flex items-center justify-center h-full text-gray-500">
                   No comparison data available
                 </div>
-              )}
-            </div>
-
-            {/* Show raw data for debugging */}
-            <div className="text-xs text-gray-500 mt-2 max-h-20 overflow-auto flex-shrink-0">
-              {comparisonData && comparisonData.length > 0 ? (
-                comparisonData.map((item, idx) => (
-                  <div key={idx}>
-                    {item?.origin || 'Unknown'}: {item?.finalRate?.toLocaleString() || 'N/A'}
-                  </div>
-                ))
-              ) : (
-                <div>No data to display</div>
               )}
             </div>
           </div>

@@ -24,42 +24,42 @@ const COLORS = [
   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
 ];
 
-export default function CategoryMI() {
+// Updated to accept props for shared category state
+export default function CategoryMI({ selectedCategory, onCategoryChange }) {
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [seriesData, setSeriesData] = useState([]);
   const [news, setNews] = useState([]);
   const [error, setError] = useState("");
 
-// Load categories
-useEffect(() => {
-  (async () => {
-    try {
-      console.log("Fetching categories from:", `${API_BASE}/home/category-mi/categories`);
-      const res = await fetch(`${API_BASE}/home/category-mi/categories`);
-      console.log("Response status:", res.status);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Error response:", errorText);
-        throw new Error(`/home/category-mi/categories -> ${res.status}: ${errorText}`);
-      }
-      
-      const json = await res.json();
-      console.log("Categories response:", json);
-      setCategories(json.categories || []);
+  // Load categories
+  useEffect(() => {
+    (async () => {
+      try {
+        console.log("Fetching categories from:", `${API_BASE}/home/category-mi/categories`);
+        const res = await fetch(`${API_BASE}/home/category-mi/categories`);
+        console.log("Response status:", res.status);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Error response:", errorText);
+          throw new Error(`/home/category-mi/categories -> ${res.status}: ${errorText}`);
+        }
+        
+        const json = await res.json();
+        console.log("Categories response:", json);
+        setCategories(json.categories || []);
 
-      if (json.categories?.length && !selectedCategory) {
-        setSelectedCategory(json.categories[0]);
+        // Use prop function instead of local state
+        if (json.categories?.length && !selectedCategory) {
+          onCategoryChange(json.categories[0]);
+        }
+      } catch (e) {
+        console.error("Full error:", e);
+        setError(`Failed to load categories: ${e.message}`);
       }
-    } catch (e) {
-      console.error("Full error:", e);
-      setError(`Failed to load categories: ${e.message}`);
-    }
-  })();
-}, []);
-
+    })();
+  }, [selectedCategory, onCategoryChange]);
 
   // Load indices data when category changes
   useEffect(() => {
@@ -71,7 +71,7 @@ useEffect(() => {
         const res = await fetch(`${API_BASE}/home/category-mi/indices?${qs}`);
         if (!res.ok) throw new Error(`/home/category-mi/indices -> ${res.status}`);
         const json = await res.json();
-        console.log("Indices data received:", json.seriesData); // DEBUG
+        console.log("Indices data received:", json.seriesData);
         setSeriesData(json.seriesData || []);
         
         // Reset sub-category selection and auto-select first one
@@ -96,7 +96,7 @@ useEffect(() => {
         const res = await fetch(`${API_BASE}/home/category-mi/news?${qs}`);
         if (!res.ok) throw new Error(`/home/category-mi/news -> ${res.status}`);
         const json = await res.json();
-        console.log("News data received:", json.news); // DEBUG
+        console.log("News data received:", json.news);
         setNews(json.news || []);
       } catch (e) {
         console.error(e);
@@ -209,29 +209,25 @@ useEffect(() => {
   };
 
   return (
-    <div className="h-[95vh] flex flex-col p-6 bg-white overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-xl font-semibold mb-2">Category MI — Cost Indices Analysis</h2>
-
-        {error && (
-          <div className="mb-2 rounded border border-red-300 bg-red-50 p-2 text-red-800 text-sm">
-            {error}
-          </div>
-        )}
-      </div>
+    <div className="h-full flex flex-col overflow-hidden px-6 pb-6">
+      {/* Error Display */}
+      {error && (
+        <div className="mb-2 rounded border border-red-300 bg-red-50 p-2 text-red-800 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Main Content - Three Panel Layout */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel: Category Selector - 20% */}
-        <div className="w-[20%] bg-gray-50 p-3 rounded-lg flex flex-col">
+        {/* Left Panel: Category Selector - CHANGED FROM 20% TO 14% */}
+        <div className="w-[14%] bg-gray-50 p-3 rounded-lg flex flex-col">
           <h3 className="text-md font-medium mb-3">Select Category</h3>
           
           <div className="flex-1 space-y-1 overflow-y-auto">
             {categories.map((category) => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => onCategoryChange(category)} // Use prop function
                 className={`w-full text-left p-2 rounded text-xs transition-colors ${
                   selectedCategory === category
                     ? "bg-blue-500 text-white font-medium"
@@ -244,8 +240,8 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Center Panel: Charts - 50% */}
-        <div className="w-[50%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
+        {/* Center Panel: Charts - CHANGED FROM 50% TO 56% */}
+        <div className="w-[56%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
           {/* Main Line Chart */}
           <div className="flex-1 mb-4 min-h-0">
             <h3 className="text-md font-medium mb-2">
@@ -333,7 +329,7 @@ useEffect(() => {
                       {yoyChangeData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={entry.isPositive ? "#ef4444" : "#10b981"} // Red for increase, Green for decrease
+                          fill={entry.isPositive ? "#ef4444" : "#10b981"}
                         />
                       ))}
                     </Bar>
@@ -343,7 +339,6 @@ useEffect(() => {
             </div>
           )}
         </div>
-
 
         {/* Right Panel: News - 30% */}
         <div className="w-[30%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">

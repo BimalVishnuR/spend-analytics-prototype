@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   LabelList,
   Cell,
@@ -17,7 +16,11 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:5001";
 
-export default function CapitalEquipments() {
+// Updated to accept props for shared category state
+export default function CapitalEquipments({ 
+  selectedCategory = "", 
+  onCategoryChange = () => {} 
+}) {
   const [allCategories, setAllCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
   const [allRegions, setAllRegions] = useState([]);
@@ -26,8 +29,7 @@ export default function CapitalEquipments() {
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
   const [filteredRegions, setFilteredRegions] = useState([]);
   
-  // Selected values
-  const [selectedCategory, setSelectedCategory] = useState("");
+  // Selected values (category comes from props)
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
   
@@ -55,17 +57,16 @@ export default function CapitalEquipments() {
           setAllData(rawData.data || []);
         }
 
-        // Preselect first category
-        if (json.categories?.length && !selectedCategory) {
-          setSelectedCategory(json.categories[0]);
+        // Use prop function instead of local state
+        if (json.categories?.length && !selectedCategory && onCategoryChange) {
+          onCategoryChange(json.categories[0]);
         }
       } catch (e) {
         console.error(e);
         setError("Failed to load options from backend.");
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCategory, onCategoryChange]);
 
   // Update filtered options when category changes
   useEffect(() => {
@@ -175,7 +176,7 @@ export default function CapitalEquipments() {
     })();
   }, [selectedCategory, selectedSubCategory]);
 
-  // True waterfall chart data
+  // True waterfall chart data - No additional filtering needed since backend already filters
   const waterfallData = useMemo(() => {
     if (!waterfallSequence?.length) return [];
     
@@ -199,7 +200,7 @@ export default function CapitalEquipments() {
                  item.name.includes('Logistics') ? '#10b981' :
                  item.name.includes('Installation') ? '#8b5cf6' :
                  item.name.includes('Profit') || item.name.includes('margin') ? '#ef4444' :
-                 item.name.includes('O&M') ? '#6b7280' : '#84cc16'
+                 item.name.includes('O&M') || item.name.includes('Maintenance') || item.name.includes('Energy') || item.name.includes('Downtime') ? '#6b7280' : '#84cc16'
         });
       } else {
         // Milestone - show as full bar
@@ -239,54 +240,17 @@ export default function CapitalEquipments() {
   };
 
   return (
-    <div className="h-[95vh] flex flex-col p-6 bg-white overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-xl font-semibold mb-2">Capital Equipments — Cost Analysis</h2>
-
-        {error && (
-          <div className="mb-2 rounded border border-red-300 bg-red-50 p-2 text-red-800 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-2">
-          <select
-            value={selectedSubCategory}
-            onChange={(e) => setSelectedSubCategory(e.target.value)}
-            className="border p-2 rounded text-sm"
-          >
-            <option value="" disabled>
-              Select sub-category…
-            </option>
-            {filteredSubCategories.map((sc) => (
-              <option key={sc} value={sc}>
-                {sc}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value)}
-            className="border p-2 rounded text-sm"
-          >
-            <option value="" disabled>
-              Select region…
-            </option>
-            {filteredRegions.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+    <div className="h-full flex flex-col px-6 pb-6">
+      {/* Error Display */}
+      {error && (
+        <div className="mb-2 rounded border border-red-300 bg-red-50 p-2 text-red-800 text-sm">
+          {error}
         </div>
-      </div>
+      )}
 
       {/* Main Content - Three Panel Layout */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel: Category Selector - 14% (30% narrower than 20%) */}
+        {/* Left Panel: Category Selector - 14% */}
         <div className="w-[14%] bg-gray-50 p-3 rounded-lg flex flex-col">
           <h3 className="text-md font-medium mb-3">Select Category</h3>
           
@@ -294,7 +258,7 @@ export default function CapitalEquipments() {
             {allCategories.map((category) => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => onCategoryChange(category)} // Use prop function
                 className={`w-full text-left p-2 rounded text-xs transition-colors ${
                   selectedCategory === category
                     ? "bg-blue-500 text-white font-medium"
@@ -307,7 +271,7 @@ export default function CapitalEquipments() {
           </div>
         </div>
 
-        {/* Center Panel: Waterfall Chart - 56% (increased from 50%) */}
+        {/* Center Panel: Waterfall Chart - 56% */}
         <div className="w-[56%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
           <h3 className="text-md font-medium mb-2">
             Cost Breakdown: {selectedCategory} - {selectedSubCategory} ({selectedRegion})
@@ -316,6 +280,10 @@ export default function CapitalEquipments() {
           {!selectedCategory || !selectedSubCategory || !selectedRegion ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
               Select category, sub-category, and region to view waterfall
+            </div>
+          ) : waterfallData.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              No data available with values greater than zero
             </div>
           ) : (
             <div className="flex-1">
@@ -377,7 +345,7 @@ export default function CapitalEquipments() {
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-gray-500"></div>
-              <span>O&M</span>
+              <span>Operations</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-red-600"></div>
@@ -386,68 +354,134 @@ export default function CapitalEquipments() {
           </div>
         </div>
 
-        {/* Right Panel: Regional Comparison - 30% */}
-        <div className="w-[30%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
-          <h3 className="text-md font-medium mb-3">
-            Regional Comparison
-          </h3>
-          <p className="text-xs text-gray-600 mb-3">{selectedCategory} - {selectedSubCategory}</p>
-          
-          <div className="flex-1">
-            {comparisonData && comparisonData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={comparisonData} 
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+        {/* Right Panel: Filters + Regional Comparison - 30% */}
+        <div className="w-[30%] flex flex-col gap-4 min-h-0">
+          {/* MOVED: Better looking filters section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">Filters</h3>
+            
+            <div className="space-y-3">
+              {/* Sub-Category Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Sub-Category
+                </label>
+                <select
+                  value={selectedSubCategory}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                  disabled={!filteredSubCategories.length}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="region" 
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    fontSize={10}
-                  />
-                  <YAxis 
-                    fontSize={9}
-                    domain={[0, 'dataMax + 1000']}
-                  />
-                  <Tooltip 
-                    formatter={(value, name) => [`${value?.toLocaleString() || 'N/A'} OMR`, name]}
-                  />
-                  <Legend fontSize={9} />
-                  <Bar 
-                    dataKey="totalCostOfOwnership" 
-                    fill="#8884d8"
-                    name="Total Cost of Ownership"
-                  >
-                    <LabelList
-                      dataKey="totalCostOfOwnership"
-                      position="top"
-                      formatter={(v) => v ? `${Math.round(v/1000)}k` : '0'}
-                      fontSize={8}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                No comparison data available
+                  <option value="" disabled>
+                    Select sub-category...
+                  </option>
+                  {filteredSubCategories.map((sc) => (
+                    <option key={sc} value={sc}>
+                      {sc}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              {/* Region Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Region
+                </label>
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                  disabled={!filteredRegions.length}
+                >
+                  <option value="" disabled>
+                    Select region...
+                  </option>
+                  {filteredRegions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Status indicator */}
+              <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                {waterfallData.length > 0 ? (
+                  <>
+                    ✓ Showing {waterfallData.length} cost components
+                    <br />
+                    <span className="text-gray-400">(Zero-value items hidden)</span>
+                  </>
+                ) : (
+                  <span className="text-amber-600">⚠ No data available</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Raw data for debugging */}
-          <div className="text-xs text-gray-500 mt-2 max-h-20 overflow-auto flex-shrink-0">
-            {comparisonData && comparisonData.length > 0 ? (
-              comparisonData.map((item, idx) => (
-                <div key={idx}>
-                  {item?.region || 'Unknown'}: {item?.totalCostOfOwnership?.toLocaleString() || 'N/A'} OMR
+          {/* Regional Comparison Chart */}
+          <div className="flex-1 bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
+            <h3 className="text-md font-medium mb-3">
+              Regional Comparison
+            </h3>
+            <p className="text-xs text-gray-600 mb-3">{selectedCategory} - {selectedSubCategory}</p>
+            
+            <div className="flex-1">
+              {comparisonData && comparisonData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={comparisonData} 
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="region" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      fontSize={10}
+                    />
+                    <YAxis 
+                      fontSize={9}
+                      domain={[0, 'dataMax + 1000']}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [`${value?.toLocaleString() || 'N/A'} OMR`, name]}
+                    />
+                    <Bar 
+                      dataKey="totalCostOfOwnership" 
+                      fill="#8884d8"
+                      name="Total Cost of Ownership"
+                    >
+                      <LabelList
+                        dataKey="totalCostOfOwnership"
+                        position="top"
+                        formatter={(v) => v ? `${Math.round(v/1000)}k` : '0'}
+                        fontSize={8}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                  No comparison data available
                 </div>
-              ))
-            ) : (
-              <div>No data to display</div>
-            )}
+              )}
+            </div>
+
+            {/* Raw data for debugging */}
+            <div className="text-xs text-gray-500 mt-2 max-h-20 overflow-auto flex-shrink-0">
+              {comparisonData && comparisonData.length > 0 ? (
+                comparisonData.map((item, idx) => (
+                  <div key={idx}>
+                    {item?.region || 'Unknown'}: {item?.totalCostOfOwnership?.toLocaleString() || 'N/A'} OMR
+                  </div>
+                ))
+              ) : (
+                <div>No data to display</div>
+              )}
+            </div>
           </div>
         </div>
       </div>

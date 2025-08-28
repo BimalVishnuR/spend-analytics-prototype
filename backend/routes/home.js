@@ -113,12 +113,15 @@ router.get('/cost-models', async (req, res) => {
 
 // ===== Cost Model 1 (Pump Types) - UPDATED =====
 
-// 1) Options for filters (unique Suppliers & Pump Types)
+// 1) Options for filters (unique Categories, Suppliers & Pump Types)
 router.get("/cost-model-1/options", async (req, res) => {
   try {
     const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
+    const categories = Array.from(
+      new Set((rows || []).map(r => String(r["Category"] ?? "").trim()).filter(Boolean))
+    );
     const suppliers = Array.from(
       new Set((rows || []).map(r => String(r["Supplier"] ?? "").trim()).filter(Boolean))
     );
@@ -126,28 +129,29 @@ router.get("/cost-model-1/options", async (req, res) => {
       new Set((rows || []).map(r => String(r["Pump Type"] ?? "").trim()).filter(Boolean))
     );
 
-    res.json({ suppliers, pumpTypes });
+    res.json({ categories, suppliers, pumpTypes });
   } catch (error) {
     console.error("Error loading cost model 1 options:", error);
     res.status(500).json({ error: "Failed to load options", details: error.message });
   }
 });
 
-// 2) Waterfall data for specific Supplier + Pump Type
-router.get("/cost-model-1/waterfall", async (req, res) => {
+// 2) Waterfall data for specific Category + Sub-Category + Region  
+router.get("/capital-equipments/waterfall", async (req, res) => {
   try {
-    const filePath = getDataPath("Cost_Model_1.xlsx");
+    const filePath = getDataPath("Cap_g_cost_model.xlsx");
     const rows = await readSheet(filePath);
 
-    const { supplier, pumpType } = req.query;
-    if (!supplier || !pumpType) {
-      return res.status(400).json({ error: "Please provide supplier and pumpType query params" });
+    const { category, subCategory, region } = req.query;
+    if (!category || !subCategory || !region) {
+      return res.status(400).json({ error: "Please provide category, subCategory, and region query params" });
     }
 
     // Find the row
     const match = rows.find(
-      r => (String(r["Supplier"] ?? "").trim() === String(supplier).trim()) &&
-           (String(r["Pump Type"] ?? "").trim() === String(pumpType).trim())
+      r => (String(r["Category"] ?? "").trim() === String(category).trim()) &&
+           (String(r["Sub-Category"] ?? r["Sub_Category"] ?? "").trim() === String(subCategory).trim()) &&
+           (String(r["Region"] ?? "").trim() === String(region).trim())
     );
 
     if (!match) {
@@ -161,58 +165,74 @@ router.get("/cost-model-1/waterfall", async (req, res) => {
       return Number.isFinite(n) ? n : 0;
     };
 
-    // Build waterfall in correct order
-    const waterfallSequence = [
-      // Individual components first
-      { name: "Capital Cost", value: toNum(match["Capital Cost"]), type: "component" },
-      { name: "Engg & Design", value: toNum(match["Engg & Design"]), type: "component" },
-      { name: "Logistics to Oman", value: toNum(match["Logistics to Oman"]), type: "component" },
-      { name: "Installation", value: toNum(match["Installation"]), type: "component" },
+    // UPDATED: Build waterfall with Profit margin moved AFTER Base Lifecycle Cost
+    const rawWaterfallSequence = [
+      // Individual acquisition components first
+      { name: "Capital Cost (OMR)", value: toNum(match["Capital Cost (OMR)"]), type: "component" },
+      { name: "Engg & Design (OMR)", value: toNum(match["Engg & Design (OMR)"]), type: "component" },
+      { name: "Logistics (OMR)", value: toNum(match["Logistics (OMR)"]), type: "component" },
+      { name: "Installation / Onsite (OMR)", value: toNum(match["Installation / Onsite (OMR)"]), type: "component" },
       { name: "Training", value: toNum(match["Training"]), type: "component" },
       { name: "Digital Integration", value: toNum(match["Digital Integration"]), type: "component" },
+      
+      // Lifecycle components BEFORE Base Lifecycle Cost
       { name: "Maintenance (5 yrs)", value: toNum(match["Maintenance (5 yrs)"]), type: "component" },
       { name: "Downtime Cost", value: toNum(match["Downtime Cost"]), type: "component" },
       { name: "Energy Cost (5 yrs)", value: toNum(match["Energy Cost (5 yrs)"]), type: "component" },
+
       
       // First milestone - Base Lifecycle Cost
       { name: "Base Lifecycle Cost", value: toNum(match["Base Lifecycle Cost"]), type: "milestone" },
       
-      // Continue with margin
-      { name: "Margin", value: toNum(match["Margin"]), type: "component" },
+      // MOVED: Profit margin now comes AFTER Base Lifecycle Cost milestone
+      { name: "Profit margin", value: toNum(match["Profit margin"]), type: "component" },
       
-      // Final milestone
+      // Acquisition milestone
+      { name: "Total Acquisition Cost", value: toNum(match["Total Acquisition Cost"]), type: "milestone" },
+
+      { name: "O&M (Lifecycle, OMR)", value: toNum(match["O&M (Lifecycle, OMR)"]), type: "component" },
+      
+      // Final milestones
+      { name: "Total Cost of Ownership", value: toNum(match["Total Cost of Ownership"]), type: "milestone" },
       { name: "Lifecycle cost including margin", value: toNum(match["Lifecycle cost including margin"]), type: "milestone" }
     ];
 
+    // Filter out BOTH components AND milestones with zero or negative values
+    const waterfallSequence = rawWaterfallSequence.filter(item => {
+      return item.value > 0; // Filter both components and milestones with value > 0
+    });
+
     res.json({
-      supplier,
-      pumpType,
+      category,
+      subCategory,
+      region,
       waterfallSequence
     });
   } catch (error) {
-    console.error("Error loading cost model 1 waterfall data:", error);
+    console.error("Error loading capital equipments waterfall data:", error);
     res.status(500).json({ error: "Failed to load waterfall data", details: error.message });
   }
 });
 
-// 3) Comparison data for all suppliers of a specific pump type
+// 3) Comparison data for all suppliers of a specific category + pump type
 router.get("/cost-model-1/comparison", async (req, res) => {
   try {
     const filePath = getDataPath("Cost_Model_1.xlsx");
     const rows = await readSheet(filePath);
 
-    const { pumpType } = req.query;
-    if (!pumpType) {
-      return res.status(400).json({ error: "Please provide pumpType query param" });
+    const { category, pumpType } = req.query;
+    if (!category || !pumpType) {
+      return res.status(400).json({ error: "Please provide category and pumpType query params" });
     }
 
-    // Find all rows for this pump type
+    // Find all rows for this category + pump type combination
     const matches = rows.filter(
-      r => String(r["Pump Type"] ?? "").trim() === String(pumpType).trim()
+      r => (String(r["Category"] ?? "").trim() === String(category).trim()) &&
+           (String(r["Pump Type"] ?? "").trim() === String(pumpType).trim())
     );
 
     if (!matches.length) {
-      return res.status(404).json({ error: "No data found for pump type" });
+      return res.status(404).json({ error: "No data found for category and pump type" });
     }
 
     const toNum = (v) => {
@@ -230,6 +250,7 @@ router.get("/cost-model-1/comparison", async (req, res) => {
     }));
 
     res.json({
+      category,
       pumpType,
       comparisonData
     });
@@ -253,7 +274,6 @@ router.get("/cost-model-1/raw-data", async (req, res) => {
     res.status(500).json({ error: "Failed to load raw data", details: error.message });
   }
 });
-
 
 // ===== Cost Model 2 (Labor SCM) =====
 
@@ -340,7 +360,6 @@ router.get("/cost-model-2/waterfall", async (req, res) => {
     res.status(500).json({ error: "Failed to load waterfall data", details: error.message });
   }
 });
-
 
 // 3) Comparison data for all origins of a specific job title
 router.get("/cost-model-2/comparison", async (req, res) => {
@@ -518,7 +537,7 @@ router.get("/capital-equipments/options", async (req, res) => {
   }
 });
 
-// 2) Waterfall data for specific Category + Sub-Category + Region
+// 2) Waterfall data for specific Category + Sub-Category + Region  
 router.get("/capital-equipments/waterfall", async (req, res) => {
   try {
     const filePath = getDataPath("Cap_g_cost_model.xlsx");
@@ -547,24 +566,40 @@ router.get("/capital-equipments/waterfall", async (req, res) => {
       return Number.isFinite(n) ? n : 0;
     };
 
-    // Build waterfall in correct order
-    const waterfallSequence = [
-      // Individual components first
+    // Build raw waterfall sequence first
+    const rawWaterfallSequence = [
+      // Individual acquisition components first
       { name: "Capital Cost (OMR)", value: toNum(match["Capital Cost (OMR)"]), type: "component" },
       { name: "Engg & Design (OMR)", value: toNum(match["Engg & Design (OMR)"]), type: "component" },
       { name: "Logistics (OMR)", value: toNum(match["Logistics (OMR)"]), type: "component" },
       { name: "Installation / Onsite (OMR)", value: toNum(match["Installation / Onsite (OMR)"]), type: "component" },
+      { name: "Training", value: toNum(match["Training"]), type: "component" },
+      { name: "Digital Integration", value: toNum(match["Digital Integration"]), type: "component" },
       { name: "Profit margin", value: toNum(match["Profit margin"]), type: "component" },
       
       // First milestone - Total Acquisition Cost
       { name: "Total Acquisition Cost", value: toNum(match["Total Acquisition Cost"]), type: "milestone" },
       
-      // Continue with O&M
+      // Lifecycle components
+      { name: "Maintenance (5 yrs)", value: toNum(match["Maintenance (5 yrs)"]), type: "component" },
+      { name: "Downtime Cost", value: toNum(match["Downtime Cost"]), type: "component" },
+      { name: "Energy Cost (5 yrs)", value: toNum(match["Energy Cost (5 yrs)"]), type: "component" },
       { name: "O&M (Lifecycle, OMR)", value: toNum(match["O&M (Lifecycle, OMR)"]), type: "component" },
       
-      // Final milestone
-      { name: "Total Cost of Ownership", value: toNum(match["Total Cost of Ownership"]), type: "milestone" }
+      // Second milestone - Base Lifecycle Cost
+      { name: "Base Lifecycle Cost", value: toNum(match["Base Lifecycle Cost"]), type: "milestone" },
+      
+      // Final milestone - Total Cost of Ownership
+      { name: "Total Cost of Ownership", value: toNum(match["Total Cost of Ownership"]), type: "milestone" },
+      
+      // Final with margin
+      { name: "Lifecycle cost including margin", value: toNum(match["Lifecycle cost including margin"]), type: "milestone" }
     ];
+
+    // UPDATED: Filter out BOTH components AND milestones with zero or negative values
+    const waterfallSequence = rawWaterfallSequence.filter(item => {
+      return item.value > 0; // Filter both components and milestones with value > 0
+    });
 
     res.json({
       category,
@@ -577,6 +612,7 @@ router.get("/capital-equipments/waterfall", async (req, res) => {
     res.status(500).json({ error: "Failed to load waterfall data", details: error.message });
   }
 });
+
 
 // 3) Comparison data for all regions of a specific category + sub-category
 router.get("/capital-equipments/comparison", async (req, res) => {
@@ -624,7 +660,6 @@ router.get("/capital-equipments/comparison", async (req, res) => {
     res.status(500).json({ error: "Failed to load comparison data", details: error.message });
   }
 });
-// Add this new endpoint after the existing capital-equipments endpoints
 
 // 4) Get raw data for client-side filtering
 router.get("/capital-equipments/raw-data", async (req, res) => {
@@ -640,7 +675,6 @@ router.get("/capital-equipments/raw-data", async (req, res) => {
     res.status(500).json({ error: "Failed to load raw data", details: error.message });
   }
 });
-
 
 // ===== AI Insights =====
 router.get('/ai-insights', async (req, res) => {

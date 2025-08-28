@@ -4,10 +4,7 @@ import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import SupplyChainMap from "./pages/SupplyChainMap";
 import CostModel1 from "./pages/CostModel1";
-import CostModel2 from "./pages/CostModel2";
-import CategoryMI from "./pages/CategoryMI";
-import CapitalEquipments from "./pages/CapitalEquipments";
-
+import CategoryAnalysis from "./pages/CategoryAnalysis";
 
 export default function App() {
   return (
@@ -24,9 +21,8 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/supply-chain-map" element={<SupplyChainMap />} />
               <Route path="/cost-model-1" element={<CostModel1 />} />
-              <Route path="/cost-model-2" element={<CostModel2 />} />
-              <Route path="/category-mi" element={<CategoryMI />} />
-              <Route path="/capital-equipments" element={<CapitalEquipments />} />
+              {/* Combined category route with 3 tabs */}
+              <Route path="/category" element={<CategoryAnalysis />} />
             </Routes>
           </main>
 
@@ -39,4 +35,3 @@ export default function App() {
     </Router>
   );
 }
-

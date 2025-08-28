@@ -53,6 +53,21 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Add this before your routes
+console.log("=== DEBUG: Checking data files ===");
+try {
+  const fs = require('fs');
+  const path = require('path');
+  const dataDir = path.join(__dirname, 'data');
+  const files = fs.readdirSync(dataDir);
+  console.log("Data directory:", dataDir);
+  console.log("Files found:", files);
+} catch (error) {
+  console.log("Error reading data directory:", error.message);
+}
+console.log("=== END DEBUG ===");
+
+
 // ===== ROUTES =====
 app.use("/home", homeRoutes);
 app.use("/api/home", homeRoutes);
