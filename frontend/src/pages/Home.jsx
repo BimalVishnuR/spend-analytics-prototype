@@ -201,7 +201,7 @@ export default function Home() {
   );
 }
 
-/* --- Reusable --- */
+/* --- Reusable stuff--- */
 function DashboardCard({ title, children, className = "" }) {
   return (
     <div
