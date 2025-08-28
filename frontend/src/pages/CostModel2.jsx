@@ -16,9 +16,16 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:5001";
 
-// Updated to accept props for shared category state
-export default function CostModel2({ selectedCategory, onCategoryChange }) {
-  const [categories, setCategories] = useState([]);
+// Updated to NOT use category - only Job Title and Origin
+export default function CostModel2({ 
+  // Keep these props for consistency but won't use category
+  selectedCategory = "", 
+  onCategoryChange = () => {},
+  selectedSubCategory = "", 
+  onSubCategoryChange = () => {},
+  selectedRegion = "", 
+  onRegionChange = () => {}
+}) {
   const [jobTitles, setJobTitles] = useState([]);
   const [origins, setOrigins] = useState([]);
   const [selectedJobTitle, setSelectedJobTitle] = useState("");
@@ -27,21 +34,17 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
   const [comparisonData, setComparisonData] = useState([]);
   const [error, setError] = useState("");
 
-
-
-  // Load dropdown options filtered by category
+  // Load job titles and origins (no category filtering)
   useEffect(() => {
     (async () => {
       try {
-        // Add category parameter to filter job titles and origins
-        const qs = selectedCategory ? `?category=${encodeURIComponent(selectedCategory)}` : '';
-        const res = await fetch(`${API_BASE}/home/cost-model-2/options${qs}`);
+        const res = await fetch(`${API_BASE}/home/cost-model-2/options`);
         if (!res.ok) throw new Error(`/home/cost-model-2/options -> ${res.status}`);
         const json = await res.json();
         setJobTitles(json.jobTitles || []);
         setOrigins(json.origins || []);
 
-        // Optionally preselect the first values
+        // Auto-select first values if none selected
         if (json.jobTitles?.length && !selectedJobTitle) {
           setSelectedJobTitle(json.jobTitles[0]);
         }
@@ -53,23 +56,21 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
         setError("Failed to load filter options from backend.");
       }
     })();
-  }, [selectedCategory, selectedJobTitle, selectedOrigin]);
+  }, [selectedJobTitle, selectedOrigin]);
 
-  // Load waterfall data when filters change
+  // Load waterfall data when filters change (no category)
   useEffect(() => {
-    if (!selectedCategory || !selectedJobTitle || !selectedOrigin) return;
+    if (!selectedJobTitle || !selectedOrigin) return;
     (async () => {
       try {
         setError("");
         const qs = new URLSearchParams({
-          category: selectedCategory, // Include category
           jobTitle: selectedJobTitle,
           origin: selectedOrigin,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-2/waterfall?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-2/waterfall -> ${res.status}`);
         const json = await res.json();
-        console.log("Waterfall data received:", json.waterfallSequence);
         setWaterfallSequence(json.waterfallSequence || []);
       } catch (e) {
         console.error(e);
@@ -77,28 +78,26 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
         setError("Failed to load waterfall data for the selected filters.");
       }
     })();
-  }, [selectedCategory, selectedJobTitle, selectedOrigin]);
+  }, [selectedJobTitle, selectedOrigin]);
 
-  // Load comparison data when category and job title change
+  // Load comparison data when job title changes (no category)
   useEffect(() => {
-    if (!selectedCategory || !selectedJobTitle) return;
+    if (!selectedJobTitle) return;
     (async () => {
       try {
         const qs = new URLSearchParams({
-          category: selectedCategory, // Include category
           jobTitle: selectedJobTitle,
         }).toString();
         const res = await fetch(`${API_BASE}/home/cost-model-2/comparison?${qs}`);
         if (!res.ok) throw new Error(`/home/cost-model-2/comparison -> ${res.status}`);
         const json = await res.json();
-        console.log("Comparison data received:", json.comparisonData);
         setComparisonData(json.comparisonData || []);
       } catch (e) {
         console.error(e);
         setComparisonData([]);
       }
     })();
-  }, [selectedCategory, selectedJobTitle]);
+  }, [selectedJobTitle]);
 
   // True waterfall chart data
   const waterfallData = useMemo(() => {
@@ -161,79 +160,93 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
   };
 
   return (
-    <div className="h-full flex flex-col px-6 pb-6">
+    <div className="h-full flex flex-col overflow-hidden px-6 pb-6">
       {/* Error Display */}
       {error && (
-        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
+        <div className="mb-2 rounded border border-red-300 bg-red-50 p-2 text-red-800 text-sm">
           {error}
         </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex-shrink-0 mb-4">
-        <h3 className="text-md font-medium mb-3">Select Category</h3>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => onCategoryChange(category)} // Use prop function
-              className={`px-3 py-2 rounded text-sm transition-colors ${
-                selectedCategory === category
-                  ? "bg-blue-500 text-white font-medium"
-                  : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+      {/* Main Content - Three Panel Layout */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        {/* Left Panel: REDESIGNED Filter Panel - 14% (2 cards only) */}
+        <div className="w-[14%] flex flex-col gap-4 min-h-0">
+          {/* Job Title Filter Card - Takes up more space (60%) */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-[3] flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-orange-200 pb-2 mb-4">
+              <h4 className="text-sm font-semibold text-orange-800">👤 Job Title</h4>
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto">
+              {jobTitles.map((jobTitle) => (
+                <button
+                  key={jobTitle}
+                  onClick={() => setSelectedJobTitle(jobTitle)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedJobTitle === jobTitle
+                      ? "bg-orange-500 text-white font-medium shadow-sm"
+                      : "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-800"
+                  }`}
+                >
+                  {jobTitle}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Origin Filter Card - Takes remaining space (40%) */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-[2] flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-teal-200 pb-2 mb-4">
+              <h4 className="text-sm font-semibold text-teal-800">🌏 Origin</h4>
+              <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto">
+              {origins.map((origin) => (
+                <button
+                  key={origin}
+                  onClick={() => setSelectedOrigin(origin)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedOrigin === origin
+                      ? "bg-teal-500 text-white font-medium shadow-sm"
+                      : "bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800"
+                  }`}
+                >
+                  {origin}
+                </button>
+              ))}
+            </div>
+
+            {/* Status indicator */}
+            <div className="text-xs text-gray-500 pt-3 border-t border-gray-100 mt-3">
+              {waterfallData.length > 0 ? (
+                <>
+                  ✓ Showing {waterfallData.length} cost components
+                  <br />
+                  <span className="text-gray-400">(Zero-values hidden)</span>
+                </>
+              ) : (
+                <span className="text-amber-600">⚠ No data available</span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Other Filters */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <select
-            value={selectedJobTitle}
-            onChange={(e) => setSelectedJobTitle(e.target.value)}
-            className="border p-2 rounded"
-          >
-            <option value="" disabled>
-              Select job title…
-            </option>
-            {jobTitles.map((jt) => (
-              <option key={jt} value={jt}>
-                {jt}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedOrigin}
-            onChange={(e) => setSelectedOrigin(e.target.value)}
-            className="border p-2 rounded"
-          >
-            <option value="" disabled>
-              Select origin…
-            </option>
-            {origins.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Charts Container - Full Height */}
-      {!selectedCategory || !selectedJobTitle || !selectedOrigin ? (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-          Pick a Category, Job Title and Origin to see the charts.
-        </div>
-      ) : (
-        <div className="flex-1 flex gap-6">
-          {/* Left: Waterfall Chart - 70% */}
-          <div className="w-[70%] bg-gray-50 p-4 rounded-lg flex flex-col">
-            <h3 className="text-lg font-medium mb-3 flex-shrink-0">
-              Cost Breakdown Waterfall: {selectedCategory} - {selectedJobTitle} ({selectedOrigin})
-            </h3>
+        {/* Center Panel: Waterfall Chart - 56% */}
+        <div className="w-[56%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
+          <h3 className="text-md font-medium mb-2">
+            Labor Cost Waterfall: {selectedJobTitle} ({selectedOrigin})
+          </h3>
+          
+          {!selectedJobTitle || !selectedOrigin ? (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              Select job title and origin to view labor cost waterfall
+            </div>
+          ) : waterfallData.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              No data available with values greater than zero
+            </div>
+          ) : (
             <div className="flex-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={waterfallData} margin={{ top: 20, right: 30, left: 40, bottom: 120 }}>
@@ -244,7 +257,7 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
                     textAnchor="end"
                     height={120}
                     interval={0}
-                    fontSize={10}
+                    fontSize={9}
                   />
                   <YAxis />
                   <Tooltip content={<CustomTooltip />} />
@@ -261,92 +274,103 @@ export default function CostModel2({ selectedCategory, onCategoryChange }) {
                       dataKey="change"
                       position="top"
                       formatter={(v) => `${v.toLocaleString()}`}
-                      fontSize={9}
+                      fontSize={8}
                     />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          )}
 
-            {/* Legend for waterfall colors */}
-            <div className="flex-shrink-0 mt-4 flex flex-wrap gap-4 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-blue-500"></div>
-                <span>Salary</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-green-500"></div>
-                <span>Allowances</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-yellow-500"></div>
-                <span>Insurance</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-red-500"></div>
-                <span>Other Costs</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-purple-500"></div>
-                <span>Milestones</span>
-              </div>
+          {/* Legend for waterfall colors */}
+          <div className="flex-shrink-0 mt-3 flex flex-wrap gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500"></div>
+              <span>Salary</span>
             </div>
-          </div>
-
-          {/* Right: Vertical Comparison Chart - 30% */}
-          <div className="w-[30%] bg-gray-50 p-4 rounded-lg flex flex-col">
-            <h3 className="text-lg font-medium mb-3 flex-shrink-0">
-              Final Rate by Origin
-            </h3>
-            <p className="text-sm text-gray-600 mb-3 flex-shrink-0">
-              {selectedCategory} - {selectedJobTitle}
-            </p>
-            
-            <div className="flex-1">
-              {comparisonData && comparisonData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={comparisonData} 
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="origin" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      fontSize={11}
-                    />
-                    <YAxis 
-                      fontSize={10}
-                      domain={[0, 'dataMax + 500']}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`${value?.toLocaleString() || 'N/A'} OMR`, "Final Rate"]}
-                    />
-                    <Bar 
-                      dataKey="finalRate" 
-                      fill="#8884d8"
-                      minPointSize={2}
-                    >
-                      <LabelList
-                        dataKey="finalRate"
-                        position="top"
-                        formatter={(v) => v ? `${Math.round(v).toLocaleString()}` : '0'}
-                        fontSize={9}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  No comparison data available
-                </div>
-              )}
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-500"></div>
+              <span>Allowances</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-yellow-500"></div>
+              <span>Insurance</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-red-500"></div>
+              <span>Other Costs</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-purple-500"></div>
+              <span>Milestones</span>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Right Panel: Origin Comparison - 30% */}
+        <div className="w-[30%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
+          <h3 className="text-md font-medium mb-3">
+            Final Rate by Origin
+          </h3>
+          <p className="text-xs text-gray-600 mb-3">Job Title: {selectedJobTitle}</p>
+          
+          <div className="flex-1">
+            {comparisonData && comparisonData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={comparisonData} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="origin" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    fontSize={10}
+                  />
+                  <YAxis 
+                    fontSize={9}
+                    domain={[0, 'dataMax + 500']}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value?.toLocaleString() || 'N/A'} OMR`, "Final Rate"]}
+                  />
+                  <Bar 
+                    dataKey="finalRate" 
+                    fill="#8884d8"
+                    name="Final Rate"
+                  >
+                    <LabelList
+                      dataKey="finalRate"
+                      position="top"
+                      formatter={(v) => v ? `${Math.round(v).toLocaleString()}` : '0'}
+                      fontSize={8}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                No comparison data available
+              </div>
+            )}
+          </div>
+
+          {/* Comparison Legend */}
+          <div className="flex-shrink-0 mt-3 pt-2 border-t border-gray-200">
+            <div className="grid grid-cols-1 gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-indigo-500"></div>
+                <span>Labor Rates (OMR/month)</span>
+              </div>
+              <div className="text-gray-500">
+                Comparison across different origins for selected job title
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

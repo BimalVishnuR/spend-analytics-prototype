@@ -16,26 +16,22 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:5001";
 
-// Updated to accept props for shared category state
+// Updated to accept props for shared state
 export default function CapitalEquipments({ 
   selectedCategory = "", 
-  onCategoryChange = () => {} 
+  onCategoryChange = () => {},
+  selectedSubCategory = "", 
+  onSubCategoryChange = () => {},
+  selectedRegion = "", 
+  onRegionChange = () => {}
 }) {
   const [allCategories, setAllCategories] = useState([]);
-  const [allSubCategories, setAllSubCategories] = useState([]);
-  const [allRegions, setAllRegions] = useState([]);
-  
-  // Filtered options based on selected category and sub-category
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
   const [filteredRegions, setFilteredRegions] = useState([]);
   
-  // Selected values (category comes from props)
-  const [selectedSubCategory, setSelectedSubCategory] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("");
-  
   const [waterfallSequence, setWaterfallSequence] = useState([]);
   const [comparisonData, setComparisonData] = useState([]);
-  const [allData, setAllData] = useState([]); // Store all raw data for filtering
+  const [allData, setAllData] = useState([]);
   const [error, setError] = useState("");
 
   // Load all options and raw data
@@ -47,8 +43,6 @@ export default function CapitalEquipments({
         const json = await res.json();
         
         setAllCategories(json.categories || []);
-        setAllSubCategories(json.subCategories || []);
-        setAllRegions(json.regions || []);
 
         // Load raw data for filtering
         const dataRes = await fetch(`${API_BASE}/home/capital-equipments/raw-data`);
@@ -57,7 +51,7 @@ export default function CapitalEquipments({
           setAllData(rawData.data || []);
         }
 
-        // Use prop function instead of local state
+        // Auto-select first category if none selected
         if (json.categories?.length && !selectedCategory && onCategoryChange) {
           onCategoryChange(json.categories[0]);
         }
@@ -72,8 +66,6 @@ export default function CapitalEquipments({
   useEffect(() => {
     if (!selectedCategory || !allData.length) return;
 
-    console.log("Category changed to:", selectedCategory); // DEBUG
-
     // Filter sub-categories for the selected category
     const categoryData = allData.filter(item => 
       String(item["Category"] ?? "").trim() === String(selectedCategory).trim()
@@ -85,33 +77,31 @@ export default function CapitalEquipments({
 
     setFilteredSubCategories(subCats);
 
-    // Auto-select first available sub-category
-    const firstSubCategory = subCats[0] || "";
-    setSelectedSubCategory(firstSubCategory);
+    // Auto-select first available sub-category if none selected
+    if (subCats.length && !selectedSubCategory) {
+      onSubCategoryChange(subCats[0]);
+    }
 
-    // Filter regions for the selected category and first sub-category
-    const firstSubCategoryData = categoryData.filter(item =>
-      String(item["Sub-Category"] ?? item["Sub_Category"] ?? "").trim() === String(firstSubCategory).trim()
+    // Filter regions for the selected category and current sub-category
+    const subCategoryData = categoryData.filter(item =>
+      String(item["Sub-Category"] ?? item["Sub_Category"] ?? "").trim() === String(selectedSubCategory || subCats[0] || "").trim()
     );
 
     const regions = Array.from(
-      new Set(firstSubCategoryData.map(r => String(r["Region"] ?? "").trim()).filter(Boolean))
+      new Set(subCategoryData.map(r => String(r["Region"] ?? "").trim()).filter(Boolean))
     );
 
     setFilteredRegions(regions);
 
-    // Auto-select first available region
-    setSelectedRegion(regions[0] || "");
-
-    console.log("Filtered subcategories:", subCats); // DEBUG
-    console.log("Filtered regions:", regions); // DEBUG
-  }, [selectedCategory, allData]);
+    // Auto-select first available region if none selected
+    if (regions.length && !selectedRegion) {
+      onRegionChange(regions[0]);
+    }
+  }, [selectedCategory, allData, selectedSubCategory, onSubCategoryChange, selectedRegion, onRegionChange]);
 
   // Update filtered regions when sub-category changes
   useEffect(() => {
     if (!selectedCategory || !selectedSubCategory || !allData.length) return;
-
-    console.log("Sub-category changed to:", selectedSubCategory); // DEBUG
 
     // Filter regions for the selected category and sub-category
     const filteredData = allData.filter(item => 
@@ -125,11 +115,11 @@ export default function CapitalEquipments({
 
     setFilteredRegions(regions);
 
-    // Auto-select first available region
-    setSelectedRegion(regions[0] || "");
-
-    console.log("Filtered regions for subcategory:", regions); // DEBUG
-  }, [selectedSubCategory, selectedCategory, allData]);
+    // Auto-select first available region if current selection is not valid
+    if (regions.length && !regions.includes(selectedRegion)) {
+      onRegionChange(regions[0]);
+    }
+  }, [selectedSubCategory, selectedCategory, allData, selectedRegion, onRegionChange]);
 
   // Load waterfall data when all filters change
   useEffect(() => {
@@ -145,7 +135,6 @@ export default function CapitalEquipments({
         const res = await fetch(`${API_BASE}/home/capital-equipments/waterfall?${qs}`);
         if (!res.ok) throw new Error(`/home/capital-equipments/waterfall -> ${res.status}`);
         const json = await res.json();
-        console.log("Waterfall data received:", json.waterfallSequence); // DEBUG
         setWaterfallSequence(json.waterfallSequence || []);
       } catch (e) {
         console.error(e);
@@ -167,7 +156,6 @@ export default function CapitalEquipments({
         const res = await fetch(`${API_BASE}/home/capital-equipments/comparison?${qs}`);
         if (!res.ok) throw new Error(`/home/capital-equipments/comparison -> ${res.status}`);
         const json = await res.json();
-        console.log("Comparison data received:", json.comparisonData); // DEBUG
         setComparisonData(json.comparisonData || []);
       } catch (e) {
         console.error(e);
@@ -176,7 +164,7 @@ export default function CapitalEquipments({
     })();
   }, [selectedCategory, selectedSubCategory]);
 
-  // True waterfall chart data - No additional filtering needed since backend already filters
+  // Waterfall chart data processing (same as before)
   const waterfallData = useMemo(() => {
     if (!waterfallSequence?.length) return [];
     
@@ -203,14 +191,13 @@ export default function CapitalEquipments({
                  item.name.includes('O&M') || item.name.includes('Maintenance') || item.name.includes('Energy') || item.name.includes('Downtime') ? '#6b7280' : '#84cc16'
         });
       } else {
-        // Milestone - show as full bar
         data.push({
           name: item.name,
           base: 0,
           change: item.value,
           cumulative: item.value,
           isMilestone: true,
-          color: '#dc2626' // Red for milestones
+          color: '#dc2626'
         });
       }
     });
@@ -218,7 +205,7 @@ export default function CapitalEquipments({
     return data;
   }, [waterfallSequence]);
 
-  // Custom tooltip for waterfall
+  // Custom tooltip (same as before)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -250,24 +237,88 @@ export default function CapitalEquipments({
 
       {/* Main Content - Three Panel Layout */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel: Category Selector - 14% */}
-        <div className="w-[14%] bg-gray-50 p-3 rounded-lg flex flex-col">
-          <h3 className="text-md font-medium mb-3">Select Category</h3>
-          
-          <div className="flex-1 space-y-1 overflow-y-auto">
-            {allCategories.map((category) => (
-              <button
-                key={category}
-                onClick={() => onCategoryChange(category)} // Use prop function
-                className={`w-full text-left p-2 rounded text-xs transition-colors ${
-                  selectedCategory === category
-                    ? "bg-blue-500 text-white font-medium"
-                    : "bg-white hover:bg-blue-50 border border-gray-200"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+        {/* Left Panel: REDESIGNED Filter Panel - 14% */}
+        <div className="w-[14%] flex flex-col gap-3 min-h-0">
+          {/* Category Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-blue-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-blue-800">📊 Category</h4>
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {allCategories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => onCategoryChange(category)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedCategory === category
+                      ? "bg-blue-500 text-white font-medium shadow-sm"
+                      : "bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sub-Category Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-green-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-green-800">📋 Sub-Category</h4>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {filteredSubCategories.map((subCat) => (
+                <button
+                  key={subCat}
+                  onClick={() => onSubCategoryChange(subCat)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedSubCategory === subCat
+                      ? "bg-green-500 text-white font-medium shadow-sm"
+                      : "bg-green-50 hover:bg-green-100 border border-green-200 text-green-800"
+                  }`}
+                >
+                  {subCat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Region Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-purple-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-purple-800">🌍 Region</h4>
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {filteredRegions.map((region) => (
+                <button
+                  key={region}
+                  onClick={() => onRegionChange(region)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedRegion === region
+                      ? "bg-purple-500 text-white font-medium shadow-sm"
+                      : "bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800"
+                  }`}
+                >
+                  {region}
+                </button>
+              ))}
+            </div>
+
+            {/* Status indicator */}
+            <div className="text-xs text-gray-500 pt-2 border-t border-gray-100 mt-2">
+              {waterfallData.length > 0 ? (
+                <>
+                  ✓ Showing {waterfallData.length} components
+                  <br />
+                  <span className="text-gray-400">(Zero-values hidden)</span>
+                </>
+              ) : (
+                <span className="text-amber-600">⚠ No data available</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -301,10 +352,7 @@ export default function CapitalEquipments({
                   <YAxis />
                   <Tooltip content={<CustomTooltip />} />
                   
-                  {/* Base (invisible/transparent) for waterfall effect */}
                   <Bar dataKey="base" stackId="stack" fill="transparent" />
-                  
-                  {/* Actual value bars */}
                   <Bar dataKey="change" stackId="stack">
                     {waterfallData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -354,134 +402,54 @@ export default function CapitalEquipments({
           </div>
         </div>
 
-        {/* Right Panel: Filters + Regional Comparison - 30% */}
-        <div className="w-[30%] flex flex-col gap-4 min-h-0">
-          {/* MOVED: Better looking filters section */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Filters</h3>
-            
-            <div className="space-y-3">
-              {/* Sub-Category Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Sub-Category
-                </label>
-                <select
-                  value={selectedSubCategory}
-                  onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-                  disabled={!filteredSubCategories.length}
+        {/* Right Panel: Regional Comparison Only - 30% */}
+        <div className="w-[30%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
+          <h3 className="text-md font-medium mb-3">
+            Regional Comparison
+          </h3>
+          <p className="text-xs text-gray-600 mb-3">{selectedCategory} - {selectedSubCategory}</p>
+          
+          <div className="flex-1">
+            {comparisonData && comparisonData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={comparisonData} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 >
-                  <option value="" disabled>
-                    Select sub-category...
-                  </option>
-                  {filteredSubCategories.map((sc) => (
-                    <option key={sc} value={sc}>
-                      {sc}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Region Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Region
-                </label>
-                <select
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-                  disabled={!filteredRegions.length}
-                >
-                  <option value="" disabled>
-                    Select region...
-                  </option>
-                  {filteredRegions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Status indicator */}
-              <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-                {waterfallData.length > 0 ? (
-                  <>
-                    ✓ Showing {waterfallData.length} cost components
-                    <br />
-                    <span className="text-gray-400">(Zero-value items hidden)</span>
-                  </>
-                ) : (
-                  <span className="text-amber-600">⚠ No data available</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Regional Comparison Chart */}
-          <div className="flex-1 bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
-            <h3 className="text-md font-medium mb-3">
-              Regional Comparison
-            </h3>
-            <p className="text-xs text-gray-600 mb-3">{selectedCategory} - {selectedSubCategory}</p>
-            
-            <div className="flex-1">
-              {comparisonData && comparisonData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={comparisonData} 
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="region" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    fontSize={10}
+                  />
+                  <YAxis 
+                    fontSize={9}
+                    domain={[0, 'dataMax + 1000']}
+                  />
+                  <Tooltip 
+                    formatter={(value, name) => [`${value?.toLocaleString() || 'N/A'} OMR`, name]}
+                  />
+                  <Bar 
+                    dataKey="totalCostOfOwnership" 
+                    fill="#8884d8"
+                    name="Total Cost of Ownership"
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="region" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      fontSize={10}
+                    <LabelList
+                      dataKey="totalCostOfOwnership"
+                      position="top"
+                      formatter={(v) => v ? `${Math.round(v/1000)}k` : '0'}
+                      fontSize={8}
                     />
-                    <YAxis 
-                      fontSize={9}
-                      domain={[0, 'dataMax + 1000']}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => [`${value?.toLocaleString() || 'N/A'} OMR`, name]}
-                    />
-                    <Bar 
-                      dataKey="totalCostOfOwnership" 
-                      fill="#8884d8"
-                      name="Total Cost of Ownership"
-                    >
-                      <LabelList
-                        dataKey="totalCostOfOwnership"
-                        position="top"
-                        formatter={(v) => v ? `${Math.round(v/1000)}k` : '0'}
-                        fontSize={8}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                  No comparison data available
-                </div>
-              )}
-            </div>
-
-            {/* Raw data for debugging */}
-            <div className="text-xs text-gray-500 mt-2 max-h-20 overflow-auto flex-shrink-0">
-              {comparisonData && comparisonData.length > 0 ? (
-                comparisonData.map((item, idx) => (
-                  <div key={idx}>
-                    {item?.region || 'Unknown'}: {item?.totalCostOfOwnership?.toLocaleString() || 'N/A'} OMR
-                  </div>
-                ))
-              ) : (
-                <div>No data to display</div>
-              )}
-            </div>
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                No comparison data available
+              </div>
+            )}
           </div>
         </div>
       </div>

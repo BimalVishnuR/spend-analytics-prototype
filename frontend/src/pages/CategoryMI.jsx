@@ -24,10 +24,18 @@ const COLORS = [
   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
 ];
 
-// Updated to accept props for shared category state
-export default function CategoryMI({ selectedCategory, onCategoryChange }) {
+// Updated to accept props for shared state
+export default function CategoryMI({ 
+  selectedCategory, 
+  onCategoryChange,
+  selectedSubCategory, 
+  onSubCategoryChange,
+  selectedRegion, 
+  onRegionChange 
+}) {
   const [categories, setCategories] = useState([]);
-  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [subCategories, setSubCategories] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [seriesData, setSeriesData] = useState([]);
   const [news, setNews] = useState([]);
   const [error, setError] = useState("");
@@ -36,48 +44,50 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
   useEffect(() => {
     (async () => {
       try {
-        console.log("Fetching categories from:", `${API_BASE}/home/category-mi/categories`);
         const res = await fetch(`${API_BASE}/home/category-mi/categories`);
-        console.log("Response status:", res.status);
-        
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Error response:", errorText);
-          throw new Error(`/home/category-mi/categories -> ${res.status}: ${errorText}`);
-        }
-        
+        if (!res.ok) throw new Error(`/home/category-mi/categories -> ${res.status}`);
         const json = await res.json();
-        console.log("Categories response:", json);
         setCategories(json.categories || []);
 
-        // Use prop function instead of local state
+        // Auto-select first category if none selected
         if (json.categories?.length && !selectedCategory) {
           onCategoryChange(json.categories[0]);
         }
       } catch (e) {
-        console.error("Full error:", e);
+        console.error("Error loading categories:", e);
         setError(`Failed to load categories: ${e.message}`);
       }
     })();
   }, [selectedCategory, onCategoryChange]);
 
-  // Load indices data when category changes
+  // Load sub-categories and regions when category changes
   useEffect(() => {
     if (!selectedCategory) return;
     (async () => {
       try {
-        setError("");
         const qs = new URLSearchParams({ category: selectedCategory }).toString();
         const res = await fetch(`${API_BASE}/home/category-mi/indices?${qs}`);
         if (!res.ok) throw new Error(`/home/category-mi/indices -> ${res.status}`);
         const json = await res.json();
-        console.log("Indices data received:", json.seriesData);
+        
         setSeriesData(json.seriesData || []);
         
-        // Reset sub-category selection and auto-select first one
-        setSelectedSubCategory("");
-        if (json.seriesData?.length) {
-          setSelectedSubCategory(json.seriesData[0].subCategory);
+        // Extract sub-categories
+        const subCats = json.seriesData?.map(s => s.subCategory) || [];
+        setSubCategories(subCats);
+        
+        // For CategoryMI, regions can be mock data or from a separate endpoint
+        const mockRegions = ["Global", "Middle East", "Asia Pacific", "Europe", "North America"];
+        setRegions(mockRegions);
+        
+        // Auto-select first sub-category if none selected
+        if (subCats.length && !selectedSubCategory) {
+          onSubCategoryChange(subCats[0]);
+        }
+        
+        // Auto-select first region if none selected
+        if (mockRegions.length && !selectedRegion) {
+          onRegionChange(mockRegions[0]);
         }
       } catch (e) {
         console.error(e);
@@ -85,7 +95,7 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
         setError("Failed to load indices data for the selected category.");
       }
     })();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubCategory, onSubCategoryChange, selectedRegion, onRegionChange]);
 
   // Load news when category changes
   useEffect(() => {
@@ -96,7 +106,6 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
         const res = await fetch(`${API_BASE}/home/category-mi/news?${qs}`);
         if (!res.ok) throw new Error(`/home/category-mi/news -> ${res.status}`);
         const json = await res.json();
-        console.log("News data received:", json.news);
         setNews(json.news || []);
       } catch (e) {
         console.error(e);
@@ -109,7 +118,6 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
   const mainChartData = React.useMemo(() => {
     if (!seriesData.length) return [];
 
-    // Get all unique years
     const allYears = new Set();
     seriesData.forEach(series => {
       series.data.forEach(point => allYears.add(point.year));
@@ -117,7 +125,6 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
     
     const years = Array.from(allYears).sort((a, b) => a - b);
 
-    // Create combined data points
     return years.map(year => {
       const dataPoint = { 
         year, 
@@ -163,10 +170,7 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
     return changeData;
   }, [selectedSubCategory, seriesData]);
 
-  // Get available sub-categories
-  const subCategories = seriesData.map(s => s.subCategory);
-
-  // Custom tooltip for main chart
+  // Custom tooltips (same as before)
   const MainCustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const isHistorical = label <= 2024;
@@ -186,7 +190,6 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
     return null;
   };
 
-  // Custom tooltip for YoY change chart
   const YoYTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -219,33 +222,84 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
 
       {/* Main Content - Three Panel Layout */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel: Category Selector - CHANGED FROM 20% TO 14% */}
-        <div className="w-[14%] bg-gray-50 p-3 rounded-lg flex flex-col">
-          <h3 className="text-md font-medium mb-3">Select Category</h3>
-          
-          <div className="flex-1 space-y-1 overflow-y-auto">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => onCategoryChange(category)} // Use prop function
-                className={`w-full text-left p-2 rounded text-xs transition-colors ${
-                  selectedCategory === category
-                    ? "bg-blue-500 text-white font-medium"
-                    : "bg-white hover:bg-blue-50 border border-gray-200"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+        {/* Left Panel: REDESIGNED Filter Panel - 14% */}
+        <div className="w-[14%] flex flex-col gap-3 min-h-0">
+          {/* Category Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-blue-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-blue-800">📊 Category</h4>
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => onCategoryChange(category)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedCategory === category
+                      ? "bg-blue-500 text-white font-medium shadow-sm"
+                      : "bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sub-Category Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-green-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-green-800">📋 Sub-Category</h4>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {subCategories.map((subCat) => (
+                <button
+                  key={subCat}
+                  onClick={() => onSubCategoryChange(subCat)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedSubCategory === subCat
+                      ? "bg-green-500 text-white font-medium shadow-sm"
+                      : "bg-green-50 hover:bg-green-100 border border-green-200 text-green-800"
+                  }`}
+                >
+                  {subCat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Region Filter Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between border-b border-purple-200 pb-2 mb-3">
+              <h4 className="text-sm font-semibold text-purple-800">🌍 Region</h4>
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {regions.map((region) => (
+                <button
+                  key={region}
+                  onClick={() => onRegionChange(region)}
+                  className={`w-full text-left p-2 rounded-md text-xs transition-all duration-200 ${
+                    selectedRegion === region
+                      ? "bg-purple-500 text-white font-medium shadow-sm"
+                      : "bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800"
+                  }`}
+                >
+                  {region}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Center Panel: Charts - CHANGED FROM 50% TO 56% */}
+        {/* Center Panel: Charts - 56% */}
         <div className="w-[56%] bg-gray-50 p-3 rounded-lg flex flex-col min-h-0">
           {/* Main Line Chart */}
           <div className="flex-1 mb-4 min-h-0">
             <h3 className="text-md font-medium mb-2">
-              Cost Indices: {selectedCategory}
+              Cost Indices: {selectedCategory} - {selectedSubCategory} ({selectedRegion})
             </h3>
             
             {!selectedCategory ? (
@@ -288,31 +342,14 @@ export default function CategoryMI({ selectedCategory, onCategoryChange }) {
             )}
           </div>
 
-          {/* Sub-Category Selector and YoY Change Chart */}
-          {subCategories.length > 0 && (
+          {/* YoY Change Chart */}
+          {selectedSubCategory && (
             <div className="h-44 flex-shrink-0 bg-white p-2 rounded border border-gray-200">
-              <div className="mb-3 flex flex-wrap gap-1">
-                <span className="text-xs font-medium">Sub-Category:</span>
-                {subCategories.map((subCat) => (
-                  <button
-                    key={subCat}
-                    onClick={() => setSelectedSubCategory(subCat)}
-                    className={`px-2 py-1 text-xs rounded transition-colors z-10 relative ${
-                      selectedSubCategory === subCat
-                        ? "bg-green-500 text-white"
-                        : "bg-white hover:bg-green-50 border border-gray-300 shadow-sm"
-                    }`}
-                  >
-                    {subCat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-32">
+              <div className="h-full">
                 <h4 className="text-xs font-medium mb-1">
                   YoY % Change: {selectedSubCategory}
                 </h4>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="90%">
                   <BarChart data={yoyChangeData} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 

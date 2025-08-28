@@ -7,6 +7,8 @@ import CapitalEquipments from "./CapitalEquipments";
 export default function CategoryAnalysis() {
   const [activeTab, setActiveTab] = useState("cost-indices");
   const [selectedCategory, setSelectedCategory] = useState(""); // Shared category state
+  const [selectedSubCategory, setSelectedSubCategory] = useState(""); // NEW: Shared sub-category state
+  const [selectedRegion, setSelectedRegion] = useState(""); // NEW: Shared region state
   
   return (
     <div className="h-[95vh] flex flex-col bg-white">
@@ -46,7 +48,6 @@ export default function CategoryAnalysis() {
           >
             Labor SCM Analysis
           </button>
-
         </div>
       </div>
       
@@ -56,16 +57,28 @@ export default function CategoryAnalysis() {
           <CategoryMI 
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
+            selectedSubCategory={selectedSubCategory}
+            onSubCategoryChange={setSelectedSubCategory}
+            selectedRegion={selectedRegion}
+            onRegionChange={setSelectedRegion}
           />
         ) : activeTab === "labor-scm" ? (
           <CostModel2 
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
+            selectedSubCategory={selectedSubCategory}
+            onSubCategoryChange={setSelectedSubCategory}
+            selectedRegion={selectedRegion}
+            onRegionChange={setSelectedRegion}
           />
         ) : (
           <CapitalEquipments 
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
+            selectedSubCategory={selectedSubCategory}
+            onSubCategoryChange={setSelectedSubCategory}
+            selectedRegion={selectedRegion}
+            onRegionChange={setSelectedRegion}
           />
         )}
       </div>
