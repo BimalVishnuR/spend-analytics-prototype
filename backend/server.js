@@ -1,6 +1,7 @@
 // backend/server.js
 import express from "express";
 import cors from "cors";
+import dotenv from 'dotenv';
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -11,6 +12,9 @@ import { loadCSV, toNumber } from "./services/dataService.js";
 import homeRoutes from "./routes/home.js";
 import mapRoutes from "./routes/map.js";
 import commoditiesRouter from "./routes/commodities.js";
+import marketIntelligenceRoutes from './routes/market-intelligence.js'; // ADDED
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -67,12 +71,12 @@ try {
 }
 console.log("=== END DEBUG ===");
 
-
 // ===== ROUTES =====
 app.use("/home", homeRoutes);
 app.use("/api/home", homeRoutes);
 app.use("/api/map", mapRoutes);
 app.use("/api/commodities", commoditiesRouter);
+app.use("/market-intelligence", marketIntelligenceRoutes); // ADDED - NEW ROUTE
 
 // ===== MULTER SETUP =====
 const upload = multer({ 
@@ -108,6 +112,11 @@ app.get("/", (req, res) => {
       "/api/map/freezones",
       "/api/map/fields",
       "/api/map/pipelines"
+    ],
+    marketIntelligenceEndpoints: [ // ADDED - NEW SECTION
+      "/market-intelligence/health",
+      "/market-intelligence/ingest",
+      "/market-intelligence/chat"
     ]
   });
 });
@@ -286,7 +295,8 @@ app.use('*', (req, res) => {
     availableEndpoints: {
       health: '/',
       home: '/home/*',
-      api: '/api/*'
+      api: '/api/*',
+      marketIntelligence: '/market-intelligence/*' // ADDED
     }
   });
 });
@@ -318,5 +328,6 @@ app.listen(PORT, () => {
   console.log(`📡 CORS enabled for: https://spend-analytics-prototype.vercel.app`);
   console.log(`🏠 Home endpoints available at /home/*`);
   console.log(`🗺️  Map endpoints available at /api/map/*`);
+  console.log(`🤖 Market Intelligence endpoints available at /market-intelligence/*`); // ADDED
   console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'} (Express 4.x)`);
 });

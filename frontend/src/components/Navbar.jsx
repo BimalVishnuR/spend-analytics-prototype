@@ -1,11 +1,13 @@
 // frontend/src/components/Navbar.jsx
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+
 import {
   Home,
   Map,
   Calculator,
   BarChart3,
+  Brain, // Add this new icon for Market Intelligence
 } from "lucide-react";
 
 export default function Navbar() {
@@ -31,12 +33,17 @@ export default function Navbar() {
         Category
       </Link>
 
+      {/* NEW: Market Intelligence */}
+      <Link to="/market-intelligence" className={linkClasses("/market-intelligence")}>
+        <Brain className="h-6 w-6 mb-1" />
+        AI Intel
+      </Link>
+
       {/* Supply Chain Map */}
       <Link to="/supply-chain-map" className={linkClasses("/supply-chain-map")}>
         <Map className="h-6 w-6 mb-1" />
         Map
       </Link>
-
     </nav>
   );
 }
